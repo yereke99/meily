@@ -11,7 +11,10 @@ type Config struct {
 	Token           string `json:"token"`
 	BaseURL         string `json:"base_url"`
 	DBName          string `json:"db_name"`
-	SavePaymentsDir string `json"save_payments_dir"`
+	SavePaymentsDir string `json:"save_payments_dir"`
+	AdminID         int64  `json:"admin_id"`
+	StartPhotoId    string `json:"start_photo_id"`
+	StartVideoId    string `json:"start_video_id"`
 }
 
 // NewConfig creates and returns a new configuration instance
@@ -22,6 +25,9 @@ func NewConfig() (*Config, error) {
 		BaseURL:         "https://yourdomain.com", // Update this with your actual domain
 		DBName:          "meily.db",
 		SavePaymentsDir: "./payment",
+		AdminID:         800703982,
+		StartPhotoId:    "AgACAgIAAxkBAANSaFP5emhGuJ5qTUamzTYon-yyPv4AAszxMRuxzqBKW2jULQVc0e4BAAMCAAN5AAM2BA",
+		StartVideoId:    "",
 	}
 
 	// Override with environment variables if set

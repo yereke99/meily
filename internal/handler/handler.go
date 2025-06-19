@@ -64,13 +64,15 @@ func (h *Handler) StartHandler(ctx context.Context, b *bot.Bot, update *models.U
 			},
 		},
 	}
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      update.Message.Chat.ID,
-		Text:        promoText,
-		ReplyMarkup: inlineKbd,
+	_, err := b.SendPhoto(ctx, &bot.SendPhotoParams{
+		ChatID:         update.Message.Chat.ID,
+		Photo:          &models.InputFileString{Data: h.cfg.StartPhotoId},
+		Caption:        promoText,
+		ReplyMarkup:    inlineKbd,
+		ProtectContent: true,
 	})
 	if err != nil {
-		h.logger.Warn("Failed to send promo message", zap.Error(err))
+		h.logger.Warn("Failed to send promo photo", zap.Error(err))
 	}
 }
 
@@ -104,9 +106,21 @@ func (h *Handler) CountHandler(ctx context.Context, b *bot.Bot, update *models.U
 		IsPaid: false,
 	}
 
+	inlineKbd := &models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
+				{
+					Text: "💳 Төлем жасау",
+					URL:  "https://pay.kaspi.kz/pay/ndy27jz5",
+				},
+			},
+		},
+	}
+
 	_, sendErr := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: userID,
-		Text:   "✅ Тамаша! Енді төлемді растайтын чекті PDF форматында жіберіңіз.",
+		ChatID:      userID,
+		Text:        "✅ Тамаша! Енді төмендегі сілтемеге өтіп төлем жасап, төлемді растайтын чекті PDF форматында жіберіңіз.",
+		ReplyMarkup: inlineKbd,
 	})
 	if sendErr != nil {
 		h.logger.Warn("Failed to send confirmation message", zap.Error(sendErr))
@@ -197,6 +211,23 @@ func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models
 		userID = update.Message.From.ID
 	} else {
 		userID = update.CallbackQuery.From.ID
+	}
+
+	if userID == h.cfg.AdminID {
+		var fileId string
+		switch {
+		case len(update.Message.Photo) > 0:
+			fileId = update.Message.Photo[len(update.Message.Photo)-1].FileID
+		case update.Message.Video != nil:
+			fileId = update.Message.Video.FileID
+		}
+		_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: h.cfg.AdminID,
+			Text:   fileId,
+		})
+		if err != nil {
+			h.logger.Error("error send fileId to admin", zap.Error(err))
+		}
 	}
 
 	userState, ok := h.state[userID]
