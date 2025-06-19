@@ -145,7 +145,7 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	}
 	defer resp.Body.Close()
 
-	saveDir := "./payments"
+	saveDir := h.cfg.SavePaymentsDir
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
 		h.logger.Error("Failed to create payments directory", zap.Error(err))
 		return
@@ -183,6 +183,8 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	if err != nil {
 		h.logger.Warn("Failed to send confirmation message", zap.Error(err))
 	}
+
+	delete(h.state, userID)
 }
 
 func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
