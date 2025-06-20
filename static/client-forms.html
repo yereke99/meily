@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Meily Cosmetics | Данные для доставки</title>
+  <style>
+    :root {
+      /* Light theme */
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+      --card-bg: rgba(255, 255, 255, 0.98);
+      --card-border: rgba(0, 0, 0, 0.06);
+      --text-primary: #1a202c;
+      --text-secondary: #4a5568;
+      --text-muted: #718096;
+      --accent-primary: #ec4899;
+      --accent-secondary: #10b981;
+      --accent-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+      --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --input-bg: #f7fafc;
+      --input-border: #e2e8f0;
+      --input-focus: #ec4899;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+      --nav-bg: rgba(255, 255, 255, 0.9);
+      --nav-hover: rgba(236, 72, 153, 0.1);
+      --progress-bg: rgba(236, 72, 153, 0.1);
+      --progress-fill: #ec4899;
+      --glow: rgba(236, 72, 153, 0.5);
+      --tg-viewport-height: 100vh;
+    }
+
+    [data-theme="dark"] {
+      /* Dark theme */
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-gradient: linear-gradient(135deg, #be185d 0%, #831843 100%);
+      --card-bg: rgba(30, 41, 59, 0.98);
+      --card-border: rgba(255, 255, 255, 0.06);
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-primary: #f472b6;
+      --accent-secondary: #34d399;
+      --accent-gradient: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+      --success-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      --input-bg: #1e293b;
+      --input-border: #334155;
+      --input-focus: #f472b6;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+      --nav-bg: rgba(30, 41, 59, 0.9);
+      --nav-hover: rgba(244, 114, 182, 0.1);
+      --progress-bg: rgba(244, 114, 182, 0.1);
+      --progress-fill: #f472b6;
+      --glow: rgba(244, 114, 182, 0.5);
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s ease;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      height: var(--tg-viewport-height);
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: var(--bg-gradient);
+      opacity: 0.03;
+      z-index: -2;
+      animation: gradientAnimation 20s ease-in-out infinite;
+    }
+
+    @keyframes gradientAnimation {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(180deg); }
+    }
+
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .content-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 20px;
+      padding-bottom: 80px;
+    }
+
+    .lang-switch {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .lang-switch button {
+      background: var(--card-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+      border-radius: 50px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lang-switch button.active {
+      background: var(--accent-gradient);
+      color: white;
+      border-color: transparent;
+    }
+
+    .page {
+      width: 100%;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow-xl);
+      padding: 32px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s ease;
+      animation: pageIn 0.5s ease-out;
+    }
+
+    @keyframes pageIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    #mapContainer {
+      width: 100%;
+      height: 350px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 20px;
+      position: relative;
+      transition: height 0.3s ease;
+      contain: layout style paint;
+    }
+
+    #mapContainer.expanded {
+      height: 500px;
+    }
+
+    #clientMap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .map-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .map-control-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .map-control-btn:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+
+    .location-status {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: var(--success-gradient);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .location-status.error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .location-status .pulse {
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Enhanced marker styles for Yandex Maps 3.0 */
+    .user-location-marker-container {
+      position: relative;
+      width: 20px;
+      height: 20px;
+    }
+
+    .user-location-dot {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #ec4899;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      top: 2px;
+      left: 2px;
+      z-index: 2;
+    }
+
+    .user-location-pulse {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      background: rgba(236, 72, 153, 0.3);
+      border-radius: 50%;
+      animation: userLocationPulse 2s infinite;
+      z-index: 1;
+    }
+
+    @keyframes userLocationPulse {
+      0% { 
+        transform: scale(1); 
+        opacity: 1; 
+      }
+      100% { 
+        transform: scale(3); 
+        opacity: 0; 
+      }
+    }
+
+    .address-marker {
+      position: relative;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 3px solid white;
+      animation: markerBounce 0.6s ease-out;
+      cursor: grab;
+      color: white;
+      background: linear-gradient(135deg, #3b82f6, #1e40af);
+    }
+
+    @keyframes markerBounce {
+      0% { 
+        transform: scale(0) translateY(-20px); 
+        opacity: 0; 
+      }
+      50% { 
+        transform: scale(1.2) translateY(-10px); 
+        opacity: 1; 
+      }
+      100% { 
+        transform: scale(1) translateY(0); 
+        opacity: 1; 
+      }
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      text-decoration: none;
+      background: var(--success-gradient);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      width: 100%;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .form-group { 
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    label { 
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    label .emoji {
+      font-size: 1.2rem;
+    }
+
+    input[type="text"], 
+    input[type="tel"],
+    textarea {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1rem;
+      border: 2px solid var(--input-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      font-weight: 500;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--input-focus);
+      background: var(--card-bg);
+      box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .address-input-container {
+      position: relative;
+    }
+
+    .address-input {
+      width: 100%;
+      padding-right: 50px;
+    }
+
+    .map-picker-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--accent-gradient);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .map-picker-btn:hover {
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .map-picker-btn.selecting {
+      background: #ef4444;
+      animation: buttonPulse 1s infinite;
+    }
+
+    @keyframes buttonPulse {
+      0%, 100% { 
+        transform: translateY(-50%) scale(1);
+      }
+      50% { 
+        transform: translateY(-50%) scale(1.1);
+      }
+    }
+
+    .suggestions-container {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      margin-top: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .suggestion-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--input-border);
+    }
+
+    .suggestion-item:hover {
+      background: var(--nav-hover);
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .location-permission-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .permission-content {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--shadow-xl);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .permission-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .permission-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: var(--text-primary);
+    }
+
+    .permission-message {
+      color: var(--text-secondary);
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .permission-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .permission-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .permission-btn.primary {
+      background: var(--accent-gradient);
+      color: white;
+    }
+
+    .permission-btn.secondary {
+      background: var(--input-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+    }
+
+    .permission-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Loading state */
+    .loading {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      margin: -20px 0 0 -20px;
+      border: 3px solid var(--input-border);
+      border-top-color: var(--accent-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Map selector modal */
+    .map-selector-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 2000;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .map-selector-content {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      bottom: 20px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-selector-header {
+      padding: 20px;
+      background: var(--accent-gradient);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .map-selector-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .close-map-selector {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    .close-map-selector:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    .map-selector-map {
+      flex: 1;
+      position: relative;
+    }
+
+    .map-selector-footer {
+      padding: 20px;
+      background: var(--input-bg);
+      border-top: 1px solid var(--card-border);
+    }
+
+    .select-address-btn {
+      background: var(--success-gradient);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    .select-address-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .select-address-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 480px) {
+      .content-wrapper {
+        padding: 12px;
+        padding-bottom: 80px;
+      }
+
+      .page {
+        padding: 24px 20px;
+        border-radius: 16px;
+      }
+
+      .map-selector-content {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+      }
+
+      .map-selector-header {
+        padding: 15px;
+      }
+
+      .map-selector-footer {
+        padding: 15px;
+      }
+
+      #mapContainer {
+        height: 250px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://api-maps.yandex.ru/v3/?apikey=8a3e4da0-9ef2-4176-9203-e7014c1dba6f&lang=ru_RU" type="text/javascript"></script>
+</head>
+<body>
+  <div class="main-container">
+    <div class="lang-switch">
+      <button onclick="setLang('ru')" id="lang-ru" class="active">RU</button>
+      <button onclick="setLang('kz')" id="lang-kz">KZ</button>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="page">
+        <h1 data-ru="Данные для доставки" data-kz="Жеткізу деректері">Данные для доставки</h1>
+        
+        <div id="mapContainer">
+          <div id="clientMap"></div>
+          <div class="location-status" id="locationStatus" style="display: none;">
+            <div class="pulse"></div>
+            <span id="locationText"></span>
+          </div>
+          <div class="map-controls">
+            <button class="map-control-btn" onclick="toggleMapSize()" title="Развернуть/свернуть">
+              <span id="mapSizeIcon">⬜</span>
+            </button>
+            <button class="map-control-btn" onclick="centerOnUser()" title="Мое местоположение">
+              <span>📍</span>
+            </button>
+          </div>
+        </div>
+        
+        <form id="clientForm">
+          <div class="form-group">
+            <label for="fio">
+              <span class="emoji">👤</span>
+              <span data-ru="ФИО" data-kz="Аты-жөні">ФИО</span>
+            </label>
+            <input type="text" id="fio" name="fio" 
+                   placeholder="" data-placeholder-ru="Введите ваше полное имя" data-placeholder-kz="Толық атыңызды енгізіңіз" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="contact">
+              <span class="emoji">📱</span>
+              <span data-ru="Контакт" data-kz="Байланыс">Контакт</span>
+            </label>
+            <input type="tel" id="contact" name="contact" 
+                   placeholder="" data-placeholder-ru="Номер телефона" data-placeholder-kz="Телефон нөмірі" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="address">
+              <span class="emoji">📍</span>
+              <span data-ru="Адрес доставки" data-kz="Жеткізу мекенжайы">Адрес доставки</span>
+            </label>
+            <div class="address-input-container">
+              <input type="text" id="address" name="address" class="address-input" 
+                     placeholder="" data-placeholder-ru="Адрес будет определен автоматически" data-placeholder-kz="Мекенжай автоматты түрде анықталады" required>
+              <button type="button" class="map-picker-btn" onclick="openMapSelector()">📍</button>
+            </div>
+            <div id="address_suggestions" class="suggestions-container" style="display: none;"></div>
+          </div>
+          
+          <input type="hidden" name="latitude" id="latitude">
+          <input type="hidden" name="longitude" id="longitude">
+          <input type="hidden" name="telegram_id" id="telegram_id">
+          
+          <button type="submit" class="btn btn-primary">
+            <span>💾</span>
+            <span data-ru="Сохранить данные" data-kz="Деректерді сақтау">Сохранить данные</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Location Permission Dialog -->
+  <div id="locationPermissionDialog" class="location-permission-dialog" style="display: none;">
+    <div class="permission-content">
+      <div class="permission-icon">🗺️</div>
+      <div class="permission-title" data-ru="Разрешение на геолокацию" data-kz="Геолокацияға рұқсат">Разрешение на геолокацию</div>
+      <div class="permission-message" data-ru="Для автоматического определения вашего адреса и точной доставки нам нужен доступ к вашему местоположению." data-kz="Мекенжайыңызды автоматты түрде анықтау және дәл жеткізу үшін бізге сіздің орналасқан жеріңізге қол жеткізу керек.">
+        Для автоматического определения вашего адреса и точной доставки нам нужен доступ к вашему местоположению.
+      </div>
+      <div class="permission-buttons">
+        <button class="permission-btn primary" onclick="requestLocationPermission()">
+          <span data-ru="Разрешить" data-kz="Рұқсат беру">Разрешить</span>
+        </button>
+        <button class="permission-btn secondary" onclick="skipLocationPermission()">
+          <span data-ru="Пропустить" data-kz="Өткізіп жіберу">Пропустить</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Selector Modal -->
+  <div id="mapSelectorModal" class="map-selector-modal">
+    <div class="map-selector-content">
+      <div class="map-selector-header">
+        <div class="map-selector-title" data-ru="Выберите адрес на карте" data-kz="Картадан мекенжай таңдаңыз">Выберите адрес на карте</div>
+        <button class="close-map-selector" onclick="closeMapSelector()">&times;</button>
+      </div>
+      <div class="map-selector-map">
+        <div id="selectorMap" style="width: 100%; height: 100%;"></div>
+      </div>
+      <div class="map-selector-footer">
+        <button class="select-address-btn" onclick="selectCurrentAddress()" disabled>
+          <span data-ru="Выбрать этот адрес" data-kz="Осы мекенжайды таңдау">Выбрать этот адрес</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Yandex Maps 3.0 implementation with real-time tracking
+    let clientMap;
+    let selectorMap;
+    let userLocationMarker;
+    let addressMarker;
+    let currentUserLocation = null;
+    let locationPermissionGranted = false;
+    let watchId = null;
+    let locationInterval = null;
+    let telegramId = null;
+    let selectedCoords = null;
+
+    // Set Telegram viewport height
+    function updateViewportHeight() {
+      let vh = window.innerHeight;
+      if (window.Telegram && Telegram.WebApp) {
+        vh = Telegram.WebApp.viewportHeight || vh;
+      }
+      document.documentElement.style.setProperty('--tg-viewport-height', `${vh}px`);
+    }
+
+    updateViewportHeight();
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.onEvent('viewportChanged', updateViewportHeight);
+    }
+
+    // Language management
+    let currentLang = 'ru';
+    const translations = {
+      ru: {
+        deliveryData: 'Данные для доставки',
+        fullName: 'ФИО',
+        contact: 'Контакт',
+        deliveryAddress: 'Адрес доставки',
+        saveData: 'Сохранить данные',
+        enterFullName: 'Введите ваше полное имя',
+        phoneNumber: 'Номер телефона',
+        addressAutoDetect: 'Адрес будет определен автоматически',
+        locationPermission: 'Разрешение на геолокацию',
+        locationPermissionMessage: 'Для автоматического определения вашего адреса и точной доставки нам нужен доступ к вашему местоположению.',
+        allow: 'Разрешить',
+        skip: 'Пропустить',
+        selectAddressOnMap: 'Выберите адрес на карте',
+        selectThisAddress: 'Выбрать этот адрес',
+        locationActive: 'Геолокация активна',
+        locationError: 'Ошибка геолокации',
+        locationUnavailable: 'Геолокация недоступна',
+        fillAllFields: 'Заполните все поля',
+        dataSaved: 'Данные сохранены!',
+        error: 'Ошибка',
+        loadingClientData: 'Загружаем ваши данные...',
+        myLocation: 'Мое местоположение'
+      },
+      kz: {
+        deliveryData: 'Жеткізу деректері',
+        fullName: 'Аты-жөні',
+        contact: 'Байланыс',
+        deliveryAddress: 'Жеткізу мекенжайы',
+        saveData: 'Деректерді сақтау',
+        enterFullName: 'Толық атыңызды енгізіңіз',
+        phoneNumber: 'Телефон нөмірі',
+        addressAutoDetect: 'Мекенжай автоматты түрде анықталады',
+        locationPermission: 'Геолокацияға рұқсат',
+        locationPermissionMessage: 'Мекенжайыңызды автоматты түрде анықтау және дәл жеткізу үшін бізге сіздің орналасқан жеріңізге қол жеткізу керек.',
+        allow: 'Рұқсат беру',
+        skip: 'Өткізіп жіберу',
+        selectAddressOnMap: 'Картадан мекенжай таңдаңыз',
+        selectThisAddress: 'Осы мекенжайды таңдау',
+        locationActive: 'Геолокация белсенді',
+        locationError: 'Геолокация қатесі',
+        locationUnavailable: 'Геолокация қол жетімді емес',
+        fillAllFields: 'Барлық өрістерді толтырыңыз',
+        dataSaved: 'Деректер сақталды!',
+        error: 'Қате',
+        loadingClientData: 'Деректеріңізді жүктеуде...',
+        myLocation: 'Менің орналасқан жерім'
+      }
+    };
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-switch button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById('lang-' + lang).classList.add('active');
+      
+      // Update all elements with data attributes
+      document.querySelectorAll('[data-ru]').forEach(el => {
+        const text = el.getAttribute('data-' + lang);
+        if (text) {
+          el.textContent = text;
+        }
+      });
+
+      // Update placeholders
+      document.querySelectorAll('[data-placeholder-ru]').forEach(el => {
+        const placeholder = el.getAttribute('data-placeholder-' + lang);
+        if (placeholder) {
+          el.placeholder = placeholder;
+        }
+      });
+    }
+
+    // Theme management
+    function detectSystemTheme() {
+      const hour = new Date().getHours();
+      return (hour >= 20 || hour < 6) ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    let currentTheme = detectSystemTheme();
+    applyTheme(currentTheme);
+
+    setInterval(() => {
+      const newTheme = detectSystemTheme();
+      if (newTheme !== currentTheme) {
+        currentTheme = newTheme;
+        applyTheme(currentTheme);
+      }
+    }, 60000);
+
+    // Telegram WebApp initialization
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+      
+      const user = Telegram.WebApp.initDataUnsafe?.user;
+      if (user) {
+        telegramId = user.id;
+        document.getElementById('telegram_id').value = telegramId;
+      }
+
+      // Get telegram_id from URL params as fallback
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTelegramId = urlParams.get('telegram_id');
+      if (urlTelegramId && !telegramId) {
+        telegramId = urlTelegramId;
+        document.getElementById('telegram_id').value = telegramId;
+      }
+
+      // Theme from Telegram
+      if (Telegram.WebApp.colorScheme) {
+        currentTheme = Telegram.WebApp.colorScheme;
+        applyTheme(currentTheme);
+      }
+
+      Telegram.WebApp.onEvent('themeChanged', function() {
+        if (Telegram.WebApp.colorScheme) {
+          currentTheme = Telegram.WebApp.colorScheme;
+          applyTheme(currentTheme);
+        }
+      });
+    }
+
+    // Location permission management
+    function showLocationPermissionDialog() {
+      document.getElementById('locationPermissionDialog').style.display = 'flex';
+    }
+
+    function requestLocationPermission() {
+      document.getElementById('locationPermissionDialog').style.display = 'none';
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            locationPermissionGranted = true;
+            currentUserLocation = [position.coords.longitude, position.coords.latitude]; // Yandex 3.0 uses [lon, lat]
+            updateLocationStatus('active', translations[currentLang].locationActive);
+            startRealtimeLocationTracking();
+            
+            // Update coordinates in form
+            document.getElementById('latitude').value = position.coords.latitude;
+            document.getElementById('longitude').value = position.coords.longitude;
+            
+            // Get address from coordinates
+            getAddressFromCoordinates(currentUserLocation).then(address => {
+              if (address) {
+                document.getElementById('address').value = address;
+              }
+            });
+
+            if (clientMap && userLocationMarker) {
+              userLocationMarker.update({ coordinates: currentUserLocation });
+              clientMap.setLocation({
+                center: currentUserLocation,
+                zoom: 16,
+                duration: 1000
+              });
+            }
+          },
+          (error) => {
+            console.error('Location permission denied:', error);
+            updateLocationStatus('error', translations[currentLang].locationError);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        updateLocationStatus('error', translations[currentLang].locationUnavailable);
+      }
+    }
+
+    function skipLocationPermission() {
+      document.getElementById('locationPermissionDialog').style.display = 'none';
+      updateLocationStatus('error', translations[currentLang].locationUnavailable);
+    }
+
+    function updateLocationStatus(status, message) {
+      const statusEl = document.getElementById('locationStatus');
+      const textEl = document.getElementById('locationText');
+      
+      if (statusEl && textEl) {
+        statusEl.style.display = 'flex';
+        statusEl.className = `location-status ${status}`;
+        textEl.textContent = message;
+      }
+    }
+
+    function startRealtimeLocationTracking() {
+      if (!navigator.geolocation || !locationPermissionGranted) return;
+
+      // Start watchPosition for continuous tracking
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newCoords = [position.coords.longitude, position.coords.latitude];
+          currentUserLocation = newCoords;
+          
+          // Update coordinates in form
+          document.getElementById('latitude').value = position.coords.latitude;
+          document.getElementById('longitude').value = position.coords.longitude;
+          
+          if (userLocationMarker && clientMap) {
+            userLocationMarker.update({ coordinates: newCoords });
+          }
+        },
+        (error) => {
+          console.error('Real-time location error:', error);
+          updateLocationStatus('error', translations[currentLang].locationError);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 1000
+        }
+      );
+
+      // Also update location every 1 second for higher accuracy
+      locationInterval = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const newCoords = [position.coords.longitude, position.coords.latitude];
+            const accuracy = position.coords.accuracy;
+            
+            if (accuracy <= 50) {
+              currentUserLocation = newCoords;
+              
+              // Update coordinates in form
+              document.getElementById('latitude').value = position.coords.latitude;
+              document.getElementById('longitude').value = position.coords.longitude;
+              
+              if (userLocationMarker && clientMap) {
+                userLocationMarker.update({ coordinates: newCoords });
+              }
+              
+              updateLocationStatus('active', `${translations[currentLang].locationActive} (±${Math.round(accuracy)}m)`);
+            }
+          },
+          (error) => {
+            console.error('Interval location error:', error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 1000,
+            maximumAge: 0
+          }
+        );
+      }, 1000);
+    }
+
+    // Yandex Maps 3.0 initialization
+    async function initClientMap(center = [76.889709, 43.238949]) {
+      try {
+        await ymaps3.ready;
+        console.log('🗺️ Initializing Client Map...');
+        
+        const {YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker, YMapListener} = ymaps3;
+        
+        if (clientMap) {
+          clientMap.destroy();
+        }
+
+        clientMap = new YMap(
+          document.getElementById('clientMap'),
+          {
+            location: {
+              center: center,
+              zoom: 14
+            },
+            theme: currentTheme === 'dark' ? 'dark' : 'light'
+          }
+        );
+
+        clientMap.addChild(new YMapDefaultSchemeLayer({ theme: currentTheme === 'dark' ? 'dark' : 'light' }));
+        clientMap.addChild(new YMapDefaultFeaturesLayer());
+
+        // Add user location marker
+        addUserLocationMarker(center);
+
+        console.log('✅ Client Map initialized successfully');
+      } catch (error) {
+        console.error('❌ Error initializing Client Map:', error);
+        updateLocationStatus('error', 'Ошибка загрузки карты');
+      }
+    }
+
+    function addUserLocationMarker(coords) {
+      try {
+        if (userLocationMarker && clientMap) {
+          clientMap.removeChild(userLocationMarker);
+        }
+
+        const {YMapMarker} = ymaps3;
+        
+        const userLocationElement = document.createElement('div');
+        userLocationElement.className = 'user-location-marker-container';
+        userLocationElement.innerHTML = `
+          <div class="user-location-dot"></div>
+          <div class="user-location-pulse"></div>
+        `;
+
+        userLocationMarker = new YMapMarker(
+          {
+            coordinates: coords,
+            draggable: false
+          },
+          userLocationElement
+        );
+
+        clientMap.addChild(userLocationMarker);
+        console.log('✅ User location marker added');
+      } catch (error) {
+        console.error('❌ Error adding user location marker:', error);
+      }
+    }
+
+    async function getAddressFromCoordinates(coordinates) {
+      try {
+        const response = await fetch(
+          `https://geocode-maps.yandex.ru/1.x/?apikey=8a3e4da0-9ef2-4176-9203-e7014c1dba6f&geocode=${coordinates[0]},${coordinates[1]}&format=json&results=1&lang=ru_RU`
+        );
+        
+        if (!response.ok) {
+          throw new Error('Geocoding API request failed');
+        }
+        
+        const data = await response.json();
+        const geoObjects = data.response?.GeoObjectCollection?.featureMember;
+        
+        if (geoObjects && geoObjects.length > 0) {
+          const address = geoObjects[0].GeoObject.metaDataProperty.GeocoderMetaData.text;
+          if (address) {
+            return address;
+          }
+        }
+        
+        throw new Error('No address found');
+        
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        return `${coordinates[1].toFixed(6)}, ${coordinates[0].toFixed(6)}`;
+      }
+    }
+
+    // Map controls
+    function toggleMapSize() {
+      const mapContainer = document.getElementById('mapContainer');
+      const icon = document.getElementById('mapSizeIcon');
+      
+      if (mapContainer.classList.contains('expanded')) {
+        mapContainer.classList.remove('expanded');
+        icon.textContent = '⬜';
+      } else {
+        mapContainer.classList.add('expanded');
+        icon.textContent = '⬛';
+      }
+      
+      setTimeout(() => {
+        if (clientMap && clientMap.container) {
+          clientMap.container.fitToViewport();
+        }
+      }, 300);
+    }
+
+    function centerOnUser() {
+      if (currentUserLocation && clientMap) {
+        clientMap.setLocation({
+          center: currentUserLocation,
+          zoom: 16,
+          duration: 1000
+        });
+      } else if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.showAlert(translations[currentLang].locationUnavailable);
+      }
+    }
+
+    // Map selector modal
+    async function openMapSelector() {
+      document.getElementById('mapSelectorModal').style.display = 'block';
+      
+      // Initialize selector map
+      setTimeout(async () => {
+        try {
+          await ymaps3.ready;
+          const {YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker, YMapListener} = ymaps3;
+          
+          if (selectorMap) {
+            selectorMap.destroy();
+          }
+
+          const center = currentUserLocation || [76.889709, 43.238949];
+
+          selectorMap = new YMap(
+            document.getElementById('selectorMap'),
+            {
+              location: {
+                center: center,
+                zoom: 15
+              },
+              theme: currentTheme === 'dark' ? 'dark' : 'light'
+            }
+          );
+
+          selectorMap.addChild(new YMapDefaultSchemeLayer({ theme: currentTheme === 'dark' ? 'dark' : 'light' }));
+          selectorMap.addChild(new YMapDefaultFeaturesLayer());
+
+          // Add click handler
+          const mapListener = new YMapListener({
+            layer: 'any',
+            onClick: handleSelectorMapClick
+          });
+          selectorMap.addChild(mapListener);
+
+          // Add user location marker if available
+          if (currentUserLocation) {
+            const userLocationElement = document.createElement('div');
+            userLocationElement.className = 'user-location-marker-container';
+            userLocationElement.innerHTML = `
+              <div class="user-location-dot"></div>
+              <div class="user-location-pulse"></div>
+            `;
+
+            const userMarker = new YMapMarker(
+              { coordinates: currentUserLocation },
+              userLocationElement
+            );
+            selectorMap.addChild(userMarker);
+          }
+
+        } catch (error) {
+          console.error('Error initializing selector map:', error);
+        }
+      }, 100);
+    }
+
+    async function handleSelectorMapClick(object, event) {
+      if (!event.coordinates) return;
+
+      const coords = event.coordinates;
+      selectedCoords = coords;
+      
+      try {
+        // Remove existing address marker
+        if (addressMarker && selectorMap) {
+          selectorMap.removeChild(addressMarker);
+        }
+
+        const {YMapMarker} = ymaps3;
+        
+        const addressElement = document.createElement('div');
+        addressElement.className = 'address-marker';
+        addressElement.textContent = '📍';
+        
+        addressMarker = new YMapMarker(
+          { coordinates: coords },
+          addressElement
+        );
+        
+        selectorMap.addChild(addressMarker);
+
+        // Enable select button
+        const selectBtn = document.querySelector('.select-address-btn');
+        selectBtn.disabled = false;
+        
+        // Get address
+        const address = await getAddressFromCoordinates(coords);
+        selectBtn.textContent = `${translations[currentLang].selectThisAddress}: ${address.substring(0, 50)}...`;
+        
+      } catch (error) {
+        console.error('Error handling map click:', error);
+      }
+    }
+
+    function selectCurrentAddress() {
+      if (!selectedCoords) return;
+
+      getAddressFromCoordinates(selectedCoords).then(address => {
+        document.getElementById('address').value = address;
+        document.getElementById('latitude').value = selectedCoords[1];
+        document.getElementById('longitude').value = selectedCoords[0];
+        closeMapSelector();
+      });
+    }
+
+    function closeMapSelector() {
+      document.getElementById('mapSelectorModal').style.display = 'none';
+      if (selectorMap) {
+        selectorMap.destroy();
+        selectorMap = null;
+      }
+      selectedCoords = null;
+    }
+
+    // Address suggestions
+    let suggestTimeout;
+    
+    function setupAddressSuggestions() {
+      const input = document.getElementById('address');
+      const suggestionsId = 'address_suggestions';
+      
+      input.addEventListener('input', function(e) {
+        clearTimeout(suggestTimeout);
+        const query = e.target.value;
+        
+        if (query.length < 3) {
+          document.getElementById(suggestionsId).style.display = 'none';
+          return;
+        }
+        
+        suggestTimeout = setTimeout(async () => {
+          try {
+            const response = await fetch(
+              `https://geocode-maps.yandex.ru/1.x/?apikey=8a3e4da0-9ef2-4176-9203-e7014c1dba6f&geocode=${encodeURIComponent(query)}&format=json&results=5&lang=ru_RU&bbox=46.99,41.15~87.31,55.44`
+            );
+            
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            const geoObjects = data.response?.GeoObjectCollection?.featureMember || [];
+            
+            if (geoObjects.length > 0) {
+              displaySuggestions(geoObjects.slice(0, 5));
+            }
+          } catch (error) {
+            console.error('Suggestion error:', error);
+          }
+        }, 300);
+      });
+    }
+
+    function displaySuggestions(items) {
+      const container = document.getElementById('address_suggestions');
+      container.innerHTML = '';
+      
+      if (items.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      items.forEach(item => {
+        const geoObject = item.GeoObject;
+        const name = geoObject.metaDataProperty.GeocoderMetaData.text;
+        const coords = geoObject.Point.pos.split(' ').map(Number); // [lon, lat]
+        
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.textContent = name;
+        div.onclick = function() {
+          document.getElementById('address').value = name;
+          document.getElementById('latitude').value = coords[1];
+          document.getElementById('longitude').value = coords[0];
+          container.style.display = 'none';
+        };
+        container.appendChild(div);
+      });
+      
+      container.style.display = 'block';
+    }
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.address-input-container')) {
+        document.getElementById('address_suggestions').style.display = 'none';
+      }
+    });
+
+    // Load existing client data
+    async function loadClientData() {
+      if (!telegramId) return;
+      
+      try {
+        updateLocationStatus('active', translations[currentLang].loadingClientData);
+        
+        const response = await fetch('/api/client/data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            telegram_id: telegramId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success && result.client) {
+          const client = result.client;
+          
+          // Fill form with existing data
+          if (client.fio) {
+            document.getElementById('fio').value = client.fio;
+          }
+          if (client.contact) {
+            document.getElementById('contact').value = client.contact;
+          }
+          if (client.address) {
+            document.getElementById('address').value = client.address;
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error loading client data:', error);
+      }
+    }
+
+    // Form submission
+    async function submitClientForm(event) {
+      event.preventDefault();
+      
+      const form = document.getElementById('clientForm');
+      const formData = new FormData(form);
+      
+      // Validate required fields
+      const fio = formData.get('fio').trim();
+      const contact = formData.get('contact').trim();
+      const address = formData.get('address').trim();
+      
+      if (!fio || !contact || !address) {
+        if (window.Telegram && Telegram.WebApp) {
+          Telegram.WebApp.showAlert(translations[currentLang].fillAllFields);
+        } else {
+          alert(translations[currentLang].fillAllFields);
+        }
+        return;
+      }
+
+      // Ensure we have coordinates
+      if (!formData.get('latitude') || !formData.get('longitude')) {
+        if (currentUserLocation) {
+          formData.set('latitude', currentUserLocation[1]);
+          formData.set('longitude', currentUserLocation[0]);
+        } else {
+          // Default to Almaty coordinates
+          formData.set('latitude', '43.238949');
+          formData.set('longitude', '76.889709');
+        }
+      }
+
+      try {
+        form.classList.add('loading');
+        
+        const response = await fetch('/api/client/save', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+          if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.showAlert(translations[currentLang].dataSaved);
+            setTimeout(() => {
+              Telegram.WebApp.close();
+            }, 2000);
+          } else {
+            alert(translations[currentLang].dataSaved);
+          }
+        } else {
+          throw new Error(result.message || 'Unknown error');
+        }
+      } catch (error) {
+        console.error('Error saving client data:', error);
+        if (window.Telegram && Telegram.WebApp) {
+          Telegram.WebApp.showAlert(translations[currentLang].error + ': ' + error.message);
+        } else {
+          alert(translations[currentLang].error + ': ' + error.message);
+        }
+      } finally {
+        form.classList.remove('loading');
+      }
+    }
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
+      if (clientMap) {
+        clientMap.destroy();
+      }
+      if (selectorMap) {
+        selectorMap.destroy();
+      }
+    });
+
+    // Make functions available globally
+    window.setLang = setLang;
+    window.toggleMapSize = toggleMapSize;
+    window.centerOnUser = centerOnUser;
+    window.requestLocationPermission = requestLocationPermission;
+    window.skipLocationPermission = skipLocationPermission;
+    window.openMapSelector = openMapSelector;
+    window.closeMapSelector = closeMapSelector;
+    window.selectCurrentAddress = selectCurrentAddress;
+
+    // Initialize the application
+    async function initializeApp() {
+      try {
+        // Wait for Yandex Maps 3.0 to be ready
+        await ymaps3.ready;
+        console.log('🚀 Yandex Maps 3.0 ready');
+        
+        // Set up form submission
+        document.getElementById('clientForm').addEventListener('submit', submitClientForm);
+        
+        // Set up address suggestions
+        setupAddressSuggestions();
+        
+        // Load existing client data
+        await loadClientData();
+        
+        // Initialize map with default location (Almaty)
+        await initClientMap([76.889709, 43.238949]);
+        
+        // Show permission dialog after a short delay
+        setTimeout(showLocationPermissionDialog, 1000);
+        
+        console.log('✅ Client Forms Application initialized successfully');
+        
+      } catch (error) {
+        console.error('❌ Application initialization error:', error);
+        updateLocationStatus('error', 'Ошибка инициализации');
+      }
+    }
+
+    // Start the application when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
+
+    console.log('💄 Meily Cosmetics Client Forms loaded');
+  </script>
+</body>
+</html>

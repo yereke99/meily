@@ -15,6 +15,7 @@ type Config struct {
 	AdminID         int64  `json:"admin_id"`
 	StartPhotoId    string `json:"start_photo_id"`
 	StartVideoId    string `json:"start_video_id"`
+	Cost            int    `json:"cost"`
 }
 
 // NewConfig creates and returns a new configuration instance
@@ -28,6 +29,7 @@ func NewConfig() (*Config, error) {
 		AdminID:         800703982,
 		StartPhotoId:    "AgACAgIAAxkBAANSaFP5emhGuJ5qTUamzTYon-yyPv4AAszxMRuxzqBKW2jULQVc0e4BAAMCAAN5AAM2BA",
 		StartVideoId:    "",
+		Cost:            20000,
 	}
 
 	// Override with environment variables if set

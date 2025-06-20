@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Meily Cosmetics | Добро пожаловать</title>
+  <style>
+    :root {
+      /* Light theme */
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+      --card-bg: rgba(255, 255, 255, 0.98);
+      --card-border: rgba(0, 0, 0, 0.06);
+      --text-primary: #1a202c;
+      --text-secondary: #4a5568;
+      --text-muted: #718096;
+      --accent-primary: #ec4899;
+      --accent-secondary: #10b981;
+      --accent-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+      --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --input-bg: #f7fafc;
+      --input-border: #e2e8f0;
+      --input-focus: #ec4899;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+      --nav-bg: rgba(255, 255, 255, 0.9);
+      --nav-hover: rgba(236, 72, 153, 0.1);
+      --glow: rgba(236, 72, 153, 0.5);
+      --tg-viewport-height: 100vh;
+    }
+
+    [data-theme="dark"] {
+      /* Dark theme */
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-gradient: linear-gradient(135deg, #be185d 0%, #831843 100%);
+      --card-bg: rgba(30, 41, 59, 0.98);
+      --card-border: rgba(255, 255, 255, 0.06);
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-primary: #f472b6;
+      --accent-secondary: #34d399;
+      --accent-gradient: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+      --success-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      --input-bg: #1e293b;
+      --input-border: #334155;
+      --input-focus: #f472b6;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+      --nav-bg: rgba(30, 41, 59, 0.9);
+      --nav-hover: rgba(244, 114, 182, 0.1);
+      --glow: rgba(244, 114, 182, 0.5);
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s ease;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      height: var(--tg-viewport-height);
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: var(--bg-gradient);
+      opacity: 0.05;
+      z-index: -2;
+      animation: gradientAnimation 20s ease-in-out infinite;
+    }
+
+    @keyframes gradientAnimation {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(180deg); }
+    }
+
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .content-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lang-switch {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .lang-switch button {
+      background: var(--card-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+      border-radius: 50px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lang-switch button.active {
+      background: var(--accent-gradient);
+      color: white;
+      border-color: transparent;
+    }
+
+    .welcome-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow-xl);
+      padding: 40px 32px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      text-align: center;
+      max-width: 500px;
+      width: 100%;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      animation: slideIn 0.8s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(50px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .brand-logo {
+      font-size: 3.5rem;
+      margin-bottom: 20px;
+      display: inline-block;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .welcome-title {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+
+    .welcome-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    .loading-container {
+      margin: 40px 0;
+    }
+
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid var(--input-border);
+      border-top: 4px solid var(--accent-primary);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .status-message {
+      padding: 20px;
+      border-radius: 16px;
+      margin: 20px 0;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .status-success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--accent-secondary);
+    }
+
+    .status-error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 16px;
+      padding: 16px 32px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      text-decoration: none;
+      background: var(--accent-gradient);
+      color: white;
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+      width: 100%;
+      letter-spacing: 0.02em;
+      margin-top: 20px;
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .emoji-decoration {
+      font-size: 1.5rem;
+      margin: 0 8px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+      60% { transform: translateY(-5px); }
+    }
+
+    .features-list {
+      text-align: left;
+      margin: 24px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .features-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      color: var(--text-secondary);
+    }
+
+    .features-list li::before {
+      content: '✨';
+      font-size: 1.2rem;
+      width: 24px;
+      text-align: center;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 480px) {
+      .content-wrapper {
+        padding: 12px;
+      }
+
+      .welcome-card {
+        padding: 32px 24px;
+        border-radius: 20px;
+      }
+
+      .brand-logo {
+        font-size: 2.8rem;
+      }
+
+      .welcome-title {
+        font-size: 1.6rem;
+      }
+
+      .welcome-subtitle {
+        font-size: 1rem;
+      }
+
+      .lang-switch {
+        top: 12px;
+        right: 12px;
+      }
+    }
+  </style>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="main-container">
+    <div class="lang-switch">
+      <button onclick="setLang('ru')" id="lang-ru" class="active">RU</button>
+      <button onclick="setLang('kz')" id="lang-kz">KZ</button>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="welcome-card">
+        <div class="brand-logo">💄 Meily</div>
+        
+        <h1 class="welcome-title" data-ru="Добро пожаловать!" data-kz="Қош келдіңіз!">
+          Добро пожаловать!
+        </h1>
+        
+        <p class="welcome-subtitle" data-ru="Спасибо за покупку косметики бренда Meily! Для доставки вашего заказа, пожалуйста, заполните форму и укажите адрес доставки." data-kz="Meily брендінің косметикасын сатып алғаныңыз үшін рахмет! Тапсырысыңызды жеткізу үшін форманы толтырып, жеткізу мекенжайын көрсетіңіз.">
+          Спасибо за покупку косметики бренда Meily! Для доставки вашего заказа, пожалуйста, заполните форму и укажите адрес доставки.
+        </p>
+
+        <ul class="features-list">
+          <li data-ru="Быстрая доставка по городу" data-kz="Қала бойынша жылдам жеткізу">Быстрая доставка по городу</li>
+          <li data-ru="Удобное отслеживание заказа" data-kz="Тапсырысты ыңғайлы бақылау">Удобное отслеживание заказа</li>
+          <li data-ru="Качественная косметика" data-kz="Сапалы косметика">Качественная косметика</li>
+        </ul>
+
+        <div id="loadingContainer" class="loading-container">
+          <div class="loading-spinner"></div>
+          <div class="loading-text" data-ru="Проверяем ваш заказ..." data-kz="Тапсырысыңызды тексеруде...">
+            Проверяем ваш заказ...
+          </div>
+        </div>
+
+        <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+        <button id="continueBtn" class="btn" style="display: none;" onclick="proceedToForms()">
+          <span>📝</span>
+          <span data-ru="Заполнить данные для доставки" data-kz="Жеткізу үшін деректерді толтыру">Заполнить данные для доставки</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Set Telegram viewport height
+    function updateViewportHeight() {
+      let vh = window.innerHeight;
+      if (window.Telegram && Telegram.WebApp) {
+        vh = Telegram.WebApp.viewportHeight || vh;
+      }
+      document.documentElement.style.setProperty('--tg-viewport-height', `${vh}px`);
+    }
+
+    updateViewportHeight();
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.onEvent('viewportChanged', updateViewportHeight);
+    }
+
+    // Language management
+    let currentLang = 'ru';
+    const translations = {
+      ru: {
+        welcome: 'Добро пожаловать!',
+        subtitle: 'Спасибо за покупку косметики бренда Meily! Для доставки вашего заказа, пожалуйста, заполните форму и укажите адрес доставки.',
+        checking: 'Проверяем ваш заказ...',
+        fillForms: 'Заполнить данные для доставки',
+        orderConfirmed: 'Ваш заказ подтвержден!',
+        orderNotFound: 'Заказ не найден или уже обработан',
+        errorOccurred: 'Произошла ошибка при проверке заказа',
+        feature1: 'Быстрая доставка по городу',
+        feature2: 'Удобное отслеживание заказа',
+        feature3: 'Качественная косметика',
+        proceedDelivery: 'Перейти к оформлению доставки'
+      },
+      kz: {
+        welcome: 'Қош келдіңіз!',
+        subtitle: 'Meily брендінің косметикасын сатып алғаныңыз үшін рахмет! Тапсырысыңызды жеткізу үшін форманы толтырып, жеткізу мекенжайын көрсетіңіз.',
+        checking: 'Тапсырысыңызды тексеруде...',
+        fillForms: 'Жеткізу үшін деректерді толтыру',
+        orderConfirmed: 'Тапсырысыңыз расталды!',
+        orderNotFound: 'Тапсырыс табылмады немесе қазірдің өңделді',
+        errorOccurred: 'Тапсырысты тексеруде қате орын алды',
+        feature1: 'Қала бойынша жылдам жеткізу',
+        feature2: 'Тапсырысты ыңғайлы бақылау',
+        feature3: 'Сапалы косметика',
+        proceedDelivery: 'Жеткізуді ресімдеуге өту'
+      }
+    };
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-switch button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById('lang-' + lang).classList.add('active');
+      
+      // Update all elements with data attributes
+      document.querySelectorAll('[data-ru]').forEach(el => {
+        const text = el.getAttribute('data-' + lang);
+        if (text) {
+          el.textContent = text;
+        }
+      });
+    }
+
+    // Theme management
+    function detectSystemTheme() {
+      const hour = new Date().getHours();
+      return (hour >= 20 || hour < 6) ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    let currentTheme = detectSystemTheme();
+    applyTheme(currentTheme);
+
+    setInterval(() => {
+      const newTheme = detectSystemTheme();
+      if (newTheme !== currentTheme) {
+        currentTheme = newTheme;
+        applyTheme(currentTheme);
+      }
+    }, 60000);
+
+    // Telegram WebApp initialization
+    let telegramId = null;
+
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+      
+      const user = Telegram.WebApp.initDataUnsafe?.user;
+      if (user) {
+        telegramId = user.id;
+      }
+
+      // Theme from Telegram
+      if (Telegram.WebApp.colorScheme) {
+        currentTheme = Telegram.WebApp.colorScheme;
+        applyTheme(currentTheme);
+      }
+
+      Telegram.WebApp.onEvent('themeChanged', function() {
+        if (Telegram.WebApp.colorScheme) {
+          currentTheme = Telegram.WebApp.colorScheme;
+          applyTheme(currentTheme);
+        }
+      });
+    }
+
+    // Check user payment status
+    async function checkUserStatus() {
+      try {
+        if (!telegramId) {
+          throw new Error('Telegram ID not found');
+        }
+
+        const response = await fetch('/api/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            telegram_id: telegramId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+          if (result.paid) {
+            showStatus('success', translations[currentLang].orderConfirmed);
+            showContinueButton();
+          } else {
+            showStatus('error', translations[currentLang].orderNotFound);
+          }
+        } else {
+          throw new Error(result.message || 'Unknown error');
+        }
+      } catch (error) {
+        console.error('Error checking user status:', error);
+        showStatus('error', translations[currentLang].errorOccurred + ': ' + error.message);
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function showStatus(type, message) {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.className = `status-message status-${type}`;
+      statusEl.textContent = message;
+      statusEl.style.display = 'block';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingContainer').style.display = 'none';
+    }
+
+    function showContinueButton() {
+      const btn = document.getElementById('continueBtn');
+      btn.style.display = 'inline-flex';
+      btn.querySelector('span:last-child').textContent = translations[currentLang].proceedDelivery;
+    }
+
+    function proceedToForms() {
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.openLink(window.location.origin + '/client-forms?telegram_id=' + telegramId);
+      } else {
+        window.location.href = '/client-forms?telegram_id=' + telegramId;
+      }
+    }
+
+    // Initialize the application
+    function initializeApp() {
+      // Start checking user status after a short delay
+      setTimeout(() => {
+        checkUserStatus();
+      }, 1500);
+    }
+
+    // Start the application when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
+
+    console.log('💄 Meily Cosmetics Welcome Page loaded');
+  </script>
+</body>
+</html>

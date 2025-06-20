@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"meily/config"
 	"meily/internal/handler"
+	"meily/internal/repository"
+	"meily/traits/database"
 	"meily/traits/logger"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/go-telegram/bot"
+	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
@@ -25,8 +29,21 @@ func main() {
 		return
 	}
 
+	db, err := sql.Open("sqlite3", cfg.DBName)
+	if err != nil {
+		zapLogger.Error("error in connect to database", zap.Error(err))
+		return
+	}
+	defer db.Close()
+
+	if err := database.CreateTables(db); err != nil {
+		zapLogger.Error("error in create tables", zap.Error(err))
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
-	handl := handler.NewHandler(cfg, zapLogger, ctx)
+	userRepo := repository.NewUserRepository(db)
+	handl := handler.NewHandler(cfg, zapLogger, ctx, userRepo)
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(handl.DefaultHandler),
