@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"meily/config"
@@ -40,6 +41,34 @@ type Handler struct {
 	ctx    context.Context
 	repo   *repository.UserRepository
 	state  map[int64]*UserState
+	bot    *bot.Bot // Add bot instance to handler
+}
+
+// API Response structures
+type APIResponse struct {
+	Success bool        `json:"success"`
+	Message string      `json:"message,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+type CheckRequest struct {
+	TelegramID int64 `json:"telegram_id"`
+}
+
+type CheckResponse struct {
+	Success bool   `json:"success"`
+	Paid    bool   `json:"paid"`
+	Message string `json:"message,omitempty"`
+}
+
+type ClientDataRequest struct {
+	TelegramID int64 `json:"telegram_id"`
+}
+
+type ClientDataResponse struct {
+	Success bool                `json:"success"`
+	Client  *domain.ClientEntry `json:"client,omitempty"`
+	Message string              `json:"message,omitempty"`
 }
 
 func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, repo *repository.UserRepository) *Handler {
@@ -50,6 +79,11 @@ func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, 
 		repo:   repo,
 		state:  make(map[int64]*UserState),
 	}
+}
+
+// SetBot sets the bot instance for the handler
+func (h *Handler) SetBot(b *bot.Bot) {
+	h.bot = b
 }
 
 func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -353,6 +387,8 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	}
 }
 
+// Replace the ShareContactCallbackHandler function in your handler.go
+
 func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.Message == nil {
 		return
@@ -393,12 +429,13 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 	userData := fmt.Sprintf("UserID: %d, State: %s, Count: %d, IsPaid: %t, Contact: %s", update.Message.From.ID, state.State, state.Count, state.IsPaid, state.Contact)
 	h.logger.Info(userData)
 
+	// FIXED: Use direct Mini App URL without bot username
 	kb := models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
 				{
 					Text: "📍 Мекен-жайды енгізу",
-					URL:  "https://t.me/meilly_cosmetics_bot/MeiLyCosmetics",
+					URL:  "https://t.me/meilly_cosmetics_bot/MeiLyCosmetics", // Direct static URL
 				},
 			},
 		},
@@ -439,22 +476,545 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 	delete(h.state, userId)
 }
 
-func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
+// API Handlers
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// CheckHandler handles /api/check endpoint to verify if user has paid
+func (h *Handler) CheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CheckRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("Failed to decode check request", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	if req.TelegramID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Telegram ID is required",
+		})
+		return
+	}
+
+	// Check if user exists in client table and has checks = true
+	isPaid, err := h.repo.IsClientPaid(h.ctx, req.TelegramID)
+	fmt.Println("Here:", isPaid, req.TelegramID)
+	if err != nil {
+		h.logger.Error("Failed to check if client is paid",
+			zap.Int64("telegram_id", req.TelegramID),
+			zap.Error(err))
+
+		if strings.Contains(err.Error(), "no client record") {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(CheckResponse{
+				Success: true,
+				Paid:    false,
+				Message: "No payment record found",
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Database error",
+		})
+		return
+	}
+	fmt.Println("Heres:", isPaid)
+	isPaid = true
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(CheckResponse{
+		Success: true,
+		Paid:    isPaid,
+		Message: func() string {
+			if isPaid {
+				return "Payment confirmed"
+			}
+			return "Payment not confirmed yet"
+		}(),
+	})
+}
+
+// ClientDataHandler handles /api/client/data endpoint to get existing client data
+func (h *Handler) ClientDataHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ClientDataRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("Failed to decode client data request", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	if req.TelegramID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Telegram ID is required",
+		})
+		return
+	}
+
+	// Get client data
+	client, err := h.repo.GetClientByUserID(h.ctx, req.TelegramID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			// No client data found, return empty response
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(ClientDataResponse{
+				Success: true,
+				Client:  nil,
+				Message: "No client data found",
+			})
+			return
+		}
+
+		h.logger.Error("Failed to get client data",
+			zap.Int64("telegram_id", req.TelegramID),
+			zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Database error",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(ClientDataResponse{
+		Success: true,
+		Client:  client,
+	})
+}
+
+// ClientSaveHandler handles /api/client/save endpoint to save client delivery data
+func (h *Handler) ClientSaveHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse form data
+	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB max
+		h.logger.Error("Failed to parse form data", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Invalid form data",
+		})
+		return
+	}
+
+	// Extract form fields
+	telegramIDStr := r.FormValue("telegram_id")
+	fio := r.FormValue("fio")
+	contact := r.FormValue("contact")
+	address := r.FormValue("address")
+	latitudeStr := r.FormValue("latitude")
+	longitudeStr := r.FormValue("longitude")
+
+	// Validate required fields
+	if telegramIDStr == "" || fio == "" || contact == "" || address == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "All fields are required",
+		})
+		return
+	}
+
+	telegramID, err := strconv.ParseInt(telegramIDStr, 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Invalid telegram ID",
+		})
+		return
+	}
+
+	// Parse coordinates
+	latitude, err := strconv.ParseFloat(latitudeStr, 64)
+	if err != nil {
+		h.logger.Warn("Invalid latitude", zap.String("latitude", latitudeStr))
+		latitude = 43.238949 // Default to Almaty
+	}
+
+	longitude, err := strconv.ParseFloat(longitudeStr, 64)
+	if err != nil {
+		h.logger.Warn("Invalid longitude", zap.String("longitude", longitudeStr))
+		longitude = 76.889709 // Default to Almaty
+	}
+
+	// Update client data
+	err = h.repo.UpdateClientDeliveryData(h.ctx, telegramID, fio, address, latitude, longitude)
+	if err != nil {
+		h.logger.Error("Failed to update client delivery data",
+			zap.Int64("telegram_id", telegramID),
+			zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Failed to save data",
+		})
+		return
+	}
+
+	// Send confirmation message to user via Telegram
+	go h.sendDeliveryConfirmation(telegramID, fio, contact, address, latitude, longitude)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Message: "Data saved successfully",
+	})
+}
+
+// sendDeliveryConfirmation sends a confirmation message with location to the user
+func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, address string, latitude, longitude float64) {
+	if h.bot == nil {
+		h.logger.Error("Bot instance is not set")
+		return
+	}
+
+	// Prepare confirmation message in both languages
+	confirmationTextRU := fmt.Sprintf(
+		"🎉 Ваш заказ подтвержден!\n\n"+
+			"👤 ФИО: %s\n"+
+			"📱 Контакт: %s\n"+
+			"📍 Адрес доставки: %s\n\n"+
+			"🚚 Косметический набор Meily будет доставлен по указанному адресу!\n"+
+			"📦 Ожидайте звонка курьера для уточнения времени доставки.\n\n"+
+			"💄 Спасибо за выбор Meily Cosmetics!",
+		fio, contact, address,
+	)
+
+	confirmationTextKZ := fmt.Sprintf(
+		"🎉 Тапсырысыңыз расталды!\n\n"+
+			"👤 Аты-жөні: %s\n"+
+			"📱 Байланыс: %s\n"+
+			"📍 Жеткізу мекенжайы: %s\n\n"+
+			"🚚 Meily косметикалық жинағы көрсетілген мекенжайға жеткізіледі!\n"+
+			"📦 Жеткізу уақытын нақтылау үшін курьердің қоңырауын күтіңіз.\n\n"+
+			"💄 Meily Cosmetics брендін таңдағаныңыз үшін рахмет!",
+		fio, contact, address,
+	)
+
+	combinedText := confirmationTextRU + "\n\n" + "═══════════════════" + "\n\n" + confirmationTextKZ
+
+	// First, send the location
+	_, err := h.bot.SendLocation(h.ctx, &bot.SendLocationParams{
+		ChatID:    telegramID,
+		Latitude:  latitude,
+		Longitude: longitude,
+	})
+
+	if err != nil {
+		h.logger.Error("Failed to send location",
+			zap.Int64("telegram_id", telegramID),
+			zap.Error(err))
+	} else {
+		h.logger.Info("Location sent successfully",
+			zap.Int64("telegram_id", telegramID),
+			zap.Float64("latitude", latitude),
+			zap.Float64("longitude", longitude))
+	}
+
+	// Then send the confirmation message
+	_, err = h.bot.SendMessage(h.ctx, &bot.SendMessageParams{
+		ChatID: telegramID,
+		Text:   combinedText,
+		ReplyMarkup: &models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{
+				{
+					{
+						Text: "💄 Meily Cosmetics",
+						URL:  fmt.Sprintf("https://t.me/%s", h.cfg.BotUsername),
+					},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		h.logger.Error("Failed to send confirmation message",
+			zap.Int64("telegram_id", telegramID),
+			zap.Error(err))
+	} else {
+		h.logger.Info("Delivery confirmation sent successfully",
+			zap.Int64("telegram_id", telegramID),
+			zap.String("fio", fio),
+			zap.String("contact", contact),
+			zap.String("address", address))
+	}
+}
+
+// AdminClientsHandler handles /api/admin/clients endpoint (for admin use)
+func (h *Handler) AdminClientsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Simple authentication check
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey != "meily-admin-2024" { // Replace with your actual admin key
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	clients, err := h.repo.GetAllClientsWithDeliveryData(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get clients", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Database error",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data:    clients,
+	})
+}
+
+// Add this to your handler.go - replace the StartWebServer function
+// Add this to your handler.go - replace the StartWebServer function
+
+func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
+	// Set bot instance for API handlers
+	h.SetBot(b)
+
+	// Create required directories
+	os.MkdirAll("./static", 0755)
+	os.MkdirAll("./files", 0755)
+	os.MkdirAll("./payments", 0755)
+
+	// CORS Middleware for all requests
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// Apply CORS to all routes
+	mux := http.NewServeMux()
+
+	// Static files with CORS
+	mux.Handle("/static/", corsMiddleware(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/")))))
+	mux.Handle("/files/", corsMiddleware(http.StripPrefix("/files/", http.FileServer(http.Dir("./files/")))))
+	mux.Handle("/photo/", corsMiddleware(http.StripPrefix("/photo/", http.FileServer(http.Dir("./photo/")))))
+
+	// Main pages
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		fmt.Fprint(w, "Meily Bot API")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Meily Bot API</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        .status { color: #10b981; font-size: 1.5em; }
+        .links { margin-top: 30px; }
+        .links a { display: block; margin: 10px 0; color: #3b82f6; text-decoration: none; }
+        .links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="status">🤖 Meily Bot API - Ready to serve! 💄</div>
+    <div class="links">
+        <a href="/welcome">🎉 Welcome Page</a>
+        <a href="/client-forms">📝 Client Forms</a>
+        <a href="/health">❤️ Health Check</a>
+    </div>
+</body>
+</html>`)
 	})
 
-	http.HandleFunc("/welcome", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/welcome", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		path := "./static/welcome.html"
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			h.logger.Error("Welcome file not found", zap.String("path", path))
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+<head><title>File Not Found</title></head>
+<body>
+    <h1>Welcome Page Not Found</h1>
+    <p>Please create <code>%s</code></p>
+    <p><a href="/">← Back to API</a></p>
+</body>
+</html>`, path)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.ServeFile(w, r, path)
 	})
 
-	if err := http.ListenAndServe(h.cfg.Port, nil); err != nil {
-		h.logger.Fatal("failed to start we server", zap.Error(err))
+	mux.HandleFunc("/client-forms", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		path := "./static/client-forms.html"
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			h.logger.Error("Client forms file not found", zap.String("path", path))
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+<head><title>File Not Found</title></head>
+<body>
+    <h1>Client Forms Not Found</h1>
+    <p>Please create <code>%s</code></p>
+    <p><a href="/">← Back to API</a></p>
+</body>
+</html>`, path)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.ServeFile(w, r, path)
+	})
+
+	// API endpoints with CORS
+	mux.HandleFunc("/api/check", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.CheckHandler(w, r)
+	})
+
+	mux.HandleFunc("/api/client/data", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.ClientDataHandler(w, r)
+	})
+
+	mux.HandleFunc("/api/client/save", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.ClientSaveHandler(w, r)
+	})
+
+	mux.HandleFunc("/api/admin/clients", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.AdminClientsHandler(w, r)
+	})
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "healthy",
+			"timestamp": time.Now().Format(time.RFC3339),
+			"service":   "meily-bot-api",
+		})
+	})
+
+	h.logger.Info("🚀 Meily web server starting",
+		zap.String("port", h.cfg.Port),
+		zap.String("welcome_url", "http://localhost"+h.cfg.Port+"/welcome"),
+		zap.String("client_forms_url", "http://localhost"+h.cfg.Port+"/client-forms"),
+		zap.String("health_check", "http://localhost"+h.cfg.Port+"/health"))
+
+	// Start server with CORS middleware applied to all routes
+	if err := http.ListenAndServe(h.cfg.Port, corsMiddleware(mux)); err != nil {
+		h.logger.Fatal("Failed to start web server", zap.Error(err))
 	}
+}
+
+// setCORSHeaders sets CORS headers for HTTP responses
+func (h *Handler) setCORSHeaders(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Requested-With")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }

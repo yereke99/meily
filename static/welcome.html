@@ -6,56 +6,56 @@
   <title>Meily Cosmetics | Добро пожаловать</title>
   <style>
     :root {
-      /* Light theme */
-      --bg-primary: #f8fafc;
+      /* Light theme - Much lighter and professional */
+      --bg-primary: #fafafa;
       --bg-secondary: #ffffff;
-      --bg-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
-      --card-bg: rgba(255, 255, 255, 0.98);
-      --card-border: rgba(0, 0, 0, 0.06);
-      --text-primary: #1a202c;
-      --text-secondary: #4a5568;
-      --text-muted: #718096;
-      --accent-primary: #ec4899;
-      --accent-secondary: #10b981;
-      --accent-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
-      --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      --input-bg: #f7fafc;
-      --input-border: #e2e8f0;
-      --input-focus: #ec4899;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+      --bg-gradient: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-border: rgba(0, 0, 0, 0.08);
+      --text-primary: #1a1a1a;
+      --text-secondary: #424242;
+      --text-muted: #757575;
+      --accent-primary: #2196f3;
+      --accent-secondary: #4caf50;
+      --accent-gradient: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+      --success-gradient: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+      --input-bg: #f8f9fa;
+      --input-border: #e0e0e0;
+      --input-focus: #2196f3;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+      --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.18);
       --nav-bg: rgba(255, 255, 255, 0.9);
-      --nav-hover: rgba(236, 72, 153, 0.1);
-      --glow: rgba(236, 72, 153, 0.5);
+      --nav-hover: rgba(33, 150, 243, 0.1);
+      --glow: rgba(33, 150, 243, 0.3);
       --tg-viewport-height: 100vh;
     }
 
     [data-theme="dark"] {
-      /* Dark theme */
-      --bg-primary: #0f172a;
-      --bg-secondary: #1e293b;
-      --bg-gradient: linear-gradient(135deg, #be185d 0%, #831843 100%);
-      --card-bg: rgba(30, 41, 59, 0.98);
-      --card-border: rgba(255, 255, 255, 0.06);
-      --text-primary: #f1f5f9;
-      --text-secondary: #cbd5e1;
-      --text-muted: #94a3b8;
-      --accent-primary: #f472b6;
-      --accent-secondary: #34d399;
-      --accent-gradient: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
-      --success-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-      --input-bg: #1e293b;
-      --input-border: #334155;
-      --input-focus: #f472b6;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-      --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
-      --nav-bg: rgba(30, 41, 59, 0.9);
-      --nav-hover: rgba(244, 114, 182, 0.1);
-      --glow: rgba(244, 114, 182, 0.5);
+      /* Dark theme - Rich and luxurious */
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #1a1a1a;
+      --bg-gradient: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+      --card-bg: rgba(26, 26, 26, 0.95);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text-primary: #ffffff;
+      --text-secondary: #e0e0e0;
+      --text-muted: #bdbdbd;
+      --accent-primary: #64b5f6;
+      --accent-secondary: #81c784;
+      --accent-gradient: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+      --success-gradient: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+      --input-bg: #1a1a1a;
+      --input-border: #424242;
+      --input-focus: #64b5f6;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.6);
+      --shadow-xl: 0 12px 28px rgba(0, 0, 0, 0.7);
+      --nav-bg: rgba(26, 26, 26, 0.9);
+      --nav-hover: rgba(100, 181, 246, 0.15);
+      --glow: rgba(100, 181, 246, 0.4);
     }
 
     * { 
@@ -91,7 +91,7 @@
       width: 200%;
       height: 200%;
       background: var(--bg-gradient);
-      opacity: 0.05;
+      opacity: 0.3;
       z-index: -2;
       animation: gradientAnimation 20s ease-in-out infinite;
     }
@@ -177,9 +177,38 @@
       }
     }
 
+    .logo-container {
+      margin-bottom: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Main logo image styles - Centered at top */
+    .main-logo {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      border-radius: 20px;
+      margin: 0 auto 20px auto;
+      box-shadow: var(--shadow-lg);
+      transition: all 0.3s ease;
+      animation: float 3s ease-in-out infinite;
+      border: 2px solid var(--card-border);
+      background: var(--card-bg);
+      padding: 8px;
+      display: block;
+    }
+
+    .main-logo:hover {
+      transform: scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+
     .brand-logo {
-      font-size: 3.5rem;
-      margin-bottom: 20px;
+      font-size: 2.8rem;
+      margin: 0;
       display: inline-block;
       background: var(--accent-gradient);
       -webkit-background-clip: text;
@@ -188,6 +217,11 @@
       font-weight: 900;
       letter-spacing: -0.02em;
       animation: float 3s ease-in-out infinite;
+    }
+
+    /* Hide text logo when image is loaded */
+    .logo-container.has-image .brand-logo {
+      display: none;
     }
 
     @keyframes float {
@@ -248,15 +282,15 @@
     }
 
     .status-success {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(56, 142, 60, 0.1));
+      border: 1px solid rgba(76, 175, 80, 0.3);
       color: var(--accent-secondary);
     }
 
     .status-error {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #ef4444;
+      background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(211, 47, 47, 0.1));
+      border: 1px solid rgba(244, 67, 54, 0.3);
+      color: #f44336;
     }
 
     .btn {
@@ -276,7 +310,7 @@
       text-decoration: none;
       background: var(--accent-gradient);
       color: white;
-      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+      box-shadow: 0 4px 15px var(--glow);
       width: 100%;
       letter-spacing: 0.02em;
       margin-top: 20px;
@@ -284,7 +318,7 @@
 
     .btn:hover {
       transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+      box-shadow: 0 6px 20px var(--glow);
     }
 
     .btn:active {
@@ -342,8 +376,13 @@
         border-radius: 20px;
       }
 
+      .main-logo {
+        width: 120px;
+        height: 120px;
+      }
+
       .brand-logo {
-        font-size: 2.8rem;
+        font-size: 2.4rem;
       }
 
       .welcome-title {
@@ -371,7 +410,12 @@
 
     <div class="content-wrapper">
       <div class="welcome-card">
-        <div class="brand-logo">💄 Meily</div>
+        <div class="logo-container" id="logoContainer">
+          <img src="./photo/main.png" alt="Meily Cosmetics" class="main-logo" id="mainLogo" 
+               onerror="this.style.display='none'; document.getElementById('logoContainer').classList.remove('has-image');"
+               onload="document.getElementById('logoContainer').classList.add('has-image');">
+          <div class="brand-logo">💄 Meily</div>
+        </div>
         
         <h1 class="welcome-title" data-ru="Добро пожаловать!" data-kz="Қош келдіңіз!">
           Добро пожаловать!
@@ -466,10 +510,16 @@
       });
     }
 
-    // Theme management
+    // Theme management - More sophisticated detection
     function detectSystemTheme() {
+      // Check if user prefers dark mode
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      
+      // Fallback to time-based detection
       const hour = new Date().getHours();
-      return (hour >= 20 || hour < 6) ? 'dark' : 'light';
+      return (hour >= 19 || hour < 7) ? 'dark' : 'light';
     }
 
     function applyTheme(theme) {
@@ -479,46 +529,116 @@
     let currentTheme = detectSystemTheme();
     applyTheme(currentTheme);
 
-    setInterval(() => {
-      const newTheme = detectSystemTheme();
-      if (newTheme !== currentTheme) {
-        currentTheme = newTheme;
+    // Listen for system theme changes
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        currentTheme = e.matches ? 'dark' : 'light';
         applyTheme(currentTheme);
+      });
+    }
+
+    // Also check time-based changes every minute
+    setInterval(() => {
+      if (!window.matchMedia || !window.matchMedia('(prefers-color-scheme: dark)').matches && !window.matchMedia('(prefers-color-scheme: light)').matches) {
+        const newTheme = detectSystemTheme();
+        if (newTheme !== currentTheme) {
+          currentTheme = newTheme;
+          applyTheme(currentTheme);
+        }
       }
     }, 60000);
 
-    // Telegram WebApp initialization
+    // Telegram WebApp initialization - Enhanced for static Mini App URL
     let telegramId = null;
+    let telegramUser = null;
 
-    if (window.Telegram && Telegram.WebApp) {
-      Telegram.WebApp.ready();
-      Telegram.WebApp.expand();
+    function initTelegramWebApp() {
+      console.log('🔍 Initializing Telegram WebApp...');
       
-      const user = Telegram.WebApp.initDataUnsafe?.user;
-      if (user) {
-        telegramId = user.id;
+      if (!window.Telegram || !Telegram.WebApp) {
+        console.warn('⚠️ Telegram WebApp not available');
+        return false;
       }
 
-      // Theme from Telegram
-      if (Telegram.WebApp.colorScheme) {
-        currentTheme = Telegram.WebApp.colorScheme;
-        applyTheme(currentTheme);
-      }
+      console.log('📱 Telegram WebApp available');
+      
+      try {
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+        
+        // Method 1: Try initDataUnsafe (most reliable)
+        if (Telegram.WebApp.initDataUnsafe?.user) {
+          telegramUser = Telegram.WebApp.initDataUnsafe.user;
+          telegramId = telegramUser.id;
+          console.log('✅ Got user from initDataUnsafe:', telegramUser);
+        }
+        // Method 2: Try initData parsing (fallback)
+        else if (Telegram.WebApp.initData) {
+          console.log('🔄 Parsing initData:', Telegram.WebApp.initData);
+          try {
+            const urlParams = new URLSearchParams(Telegram.WebApp.initData);
+            const userParam = urlParams.get('user');
+            if (userParam) {
+              telegramUser = JSON.parse(decodeURIComponent(userParam));
+              telegramId = telegramUser.id;
+              console.log('✅ Got user from initData parsing:', telegramUser);
+            }
+          } catch (e) {
+            console.error('❌ Error parsing initData:', e);
+          }
+        }
+        // Method 3: Try WebAppUser (another fallback)
+        else if (Telegram.WebApp.WebAppUser) {
+          telegramUser = Telegram.WebApp.WebAppUser;
+          telegramId = telegramUser.id;
+          console.log('✅ Got user from WebAppUser:', telegramUser);
+        }
 
-      Telegram.WebApp.onEvent('themeChanged', function() {
+        if (telegramId) {
+          console.log(`🎯 Final Telegram ID: ${telegramId}`);
+        } else {
+          console.warn('⚠️ Could not extract user ID from Telegram WebApp');
+          console.log('Debug info:', {
+            initDataUnsafe: Telegram.WebApp.initDataUnsafe,
+            initData: Telegram.WebApp.initData,
+            WebAppUser: Telegram.WebApp.WebAppUser
+          });
+        }
+
+        // Theme from Telegram
         if (Telegram.WebApp.colorScheme) {
           currentTheme = Telegram.WebApp.colorScheme;
           applyTheme(currentTheme);
+          console.log('🎨 Applied Telegram theme:', currentTheme);
         }
-      });
+
+        Telegram.WebApp.onEvent('themeChanged', function() {
+          if (Telegram.WebApp.colorScheme) {
+            currentTheme = Telegram.WebApp.colorScheme;
+            applyTheme(currentTheme);
+            console.log('🎨 Theme changed to:', currentTheme);
+          }
+        });
+
+        return true;
+
+      } catch (error) {
+        console.error('❌ Error initializing Telegram WebApp:', error);
+        return false;
+      }
     }
+
+    // Initialize Telegram WebApp
+    const telegramInitialized = initTelegramWebApp();
 
     // Check user payment status
     async function checkUserStatus() {
       try {
         if (!telegramId) {
-          throw new Error('Telegram ID not found');
+          throw new Error('❌ Не удалось получить ID пользователя из Telegram. Пожалуйста, откройте приложение через Telegram бота.');
         }
+
+        console.log('💳 Checking payment status for user:', telegramId);
 
         const response = await fetch('/api/check', {
           method: 'POST',
@@ -530,11 +650,15 @@
           })
         });
 
+        console.log('📡 API Response status:', response.status);
+
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
         const result = await response.json();
+        console.log('📊 Check API response:', result);
         
         if (result.success) {
           if (result.paid) {
@@ -547,7 +671,7 @@
           throw new Error(result.message || 'Unknown error');
         }
       } catch (error) {
-        console.error('Error checking user status:', error);
+        console.error('💥 Error checking user status:', error);
         showStatus('error', translations[currentLang].errorOccurred + ': ' + error.message);
       } finally {
         hideLoading();
@@ -573,14 +697,28 @@
 
     function proceedToForms() {
       if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.openLink(window.location.origin + '/client-forms?telegram_id=' + telegramId);
+        // Navigate within the same Mini App
+        window.location.href = '/client-forms';
       } else {
-        window.location.href = '/client-forms?telegram_id=' + telegramId;
+        window.location.href = '/client-forms';
       }
     }
 
     // Initialize the application
     function initializeApp() {
+      // Debug information
+      console.log('=== Meily Welcome Page Debug Info ===');
+      console.log('Telegram WebApp available:', !!window.Telegram?.WebApp);
+      console.log('User ID:', telegramId);
+      console.log('Current theme:', currentTheme);
+      console.log('=====================================');
+      
+      if (!telegramId) {
+        showStatus('error', 'Пожалуйста, откройте это приложение через Telegram бота');
+        hideLoading();
+        return;
+      }
+      
       // Start checking user status after a short delay
       setTimeout(() => {
         checkUserStatus();

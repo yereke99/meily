@@ -16,6 +16,7 @@ type Config struct {
 	StartPhotoId    string `json:"start_photo_id"`
 	StartVideoId    string `json:"start_video_id"`
 	Cost            int    `json:"cost"`
+	BotUsername     string `json:"bot_username"`
 }
 
 // NewConfig creates and returns a new configuration instance
@@ -23,13 +24,14 @@ func NewConfig() (*Config, error) {
 	cfg := &Config{
 		Port:            ":8080",
 		Token:           "7236771363:AAHC7J1nUx1o_OmQYhk1PVl2eRSwp-zouo4",
-		BaseURL:         "https://yourdomain.com", // Update this with your actual domain
+		BaseURL:         "https://ccc8-89-219-13-135.ngrok-free.app", // Update this with your actual domain
 		DBName:          "meily.db",
 		SavePaymentsDir: "./payment",
 		AdminID:         800703982,
 		StartPhotoId:    "AgACAgIAAxkBAANSaFP5emhGuJ5qTUamzTYon-yyPv4AAszxMRuxzqBKW2jULQVc0e4BAAMCAAN5AAM2BA",
 		StartVideoId:    "",
 		Cost:            20000,
+		BotUsername:     "meilly_cosmetics_bot",
 	}
 
 	// Override with environment variables if set
