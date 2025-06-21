@@ -755,13 +755,13 @@
 <body>
   <div class="main-container">
     <div class="lang-switch">
-      <button onclick="setLang('ru')" id="lang-ru" class="active">RU</button>
-      <button onclick="setLang('kz')" id="lang-kz">KZ</button>
+      <button onclick="setLang('ru')" id="lang-ru">RU</button>
+      <button onclick="setLang('kz')" id="lang-kz" class="active">KZ</button>
     </div>
 
     <div class="content-wrapper">
       <div class="page">
-        <h1 data-ru="Данные для доставки" data-kz="Жеткізу деректері">Данные для доставки</h1>
+        <h1 data-ru="Данные для доставки" data-kz="Жеткізу деректері">Жеткізу деректері</h1>
         
         <div id="mapContainer">
           <div id="clientMap"></div>
@@ -783,7 +783,7 @@
           <div class="form-group">
             <label for="fio">
               <span class="emoji">👤</span>
-              <span data-ru="ФИО" data-kz="Аты-жөні">ФИО</span>
+              <span data-ru="ФИО" data-kz="Аты-жөні">Аты-жөні</span>
             </label>
             <input type="text" id="fio" name="fio" 
                    placeholder="" data-placeholder-ru="Введите ваше полное имя" data-placeholder-kz="Толық атыңызды енгізіңіз" required>
@@ -792,7 +792,7 @@
           <div class="form-group">
             <label for="contact">
               <span class="emoji">📱</span>
-              <span data-ru="Контакт" data-kz="Байланыс">Контакт</span>
+              <span data-ru="Контакт" data-kz="Байланыс">Байланыс</span>
             </label>
             <input type="tel" id="contact" name="contact" 
                    placeholder="" data-placeholder-ru="Номер телефона" data-placeholder-kz="Телефон нөмірі" required>
@@ -801,7 +801,7 @@
           <div class="form-group">
             <label for="address">
               <span class="emoji">📍</span>
-              <span data-ru="Адрес доставки" data-kz="Жеткізу мекенжайы">Адрес доставки</span>
+              <span data-ru="Адрес доставки" data-kz="Жеткізу мекенжайы">Жеткізу мекенжайы</span>
             </label>
             <div class="address-input-container">
               <input type="text" id="address" name="address" class="address-input" 
@@ -817,7 +817,7 @@
           
           <button type="submit" class="btn btn-primary">
             <span>💾</span>
-            <span data-ru="Сохранить данные" data-kz="Деректерді сақтау">Сохранить данные</span>
+            <span data-ru="Сохранить данные" data-kz="Деректерді сақтау">Деректерді сақтау</span>
           </button>
         </form>
       </div>
@@ -828,16 +828,16 @@
   <div id="locationPermissionDialog" class="location-permission-dialog" style="display: none;">
     <div class="permission-content">
       <div class="permission-icon">🗺️</div>
-      <div class="permission-title" data-ru="Разрешение на геолокацию" data-kz="Геолокацияға рұқсат">Разрешение на геолокацию</div>
+      <div class="permission-title" data-ru="Разрешение на геолокацию" data-kz="Геолокацияға рұқсат">Геолокацияға рұқсат</div>
       <div class="permission-message" data-ru="Для автоматического определения вашего адреса и точной доставки нам нужен доступ к вашему местоположению." data-kz="Мекенжайыңызды автоматты түрде анықтау және дәл жеткізу үшін бізге сіздің орналасқан жеріңізге қол жеткізу керек.">
-        Для автоматического определения вашего адреса и точной доставки нам нужен доступ к вашему местоположению.
+        Мекенжайыңызды автоматты түрде анықтау және дәл жеткізу үшін бізге сіздің орналасқан жеріңізге қол жеткізу керек.
       </div>
       <div class="permission-buttons">
         <button class="permission-btn primary" onclick="requestLocationPermission()">
-          <span data-ru="Разрешить" data-kz="Рұқсат беру">Разрешить</span>
+          <span data-ru="Разрешить" data-kz="Рұқсат беру">Рұқсат беру</span>
         </button>
         <button class="permission-btn secondary" onclick="skipLocationPermission()">
-          <span data-ru="Пропустить" data-kz="Өткізіп жіберу">Пропустить</span>
+          <span data-ru="Пропустить" data-kz="Өткізіп жіберу">Өткізіп жіберу</span>
         </button>
       </div>
     </div>
@@ -847,7 +847,7 @@
   <div id="mapSelectorModal" class="map-selector-modal">
     <div class="map-selector-content">
       <div class="map-selector-header">
-        <div class="map-selector-title" data-ru="Выберите адрес на карте" data-kz="Картадан мекенжай таңдаңыз">Выберите адрес на карте</div>
+        <div class="map-selector-title" data-ru="Выберите адрес на карте" data-kz="Картадан мекенжай таңдаңыз">Картадан мекенжай таңдаңыз</div>
         <button class="close-map-selector" onclick="closeMapSelector()">&times;</button>
       </div>
       <div class="map-selector-map">
@@ -855,7 +855,7 @@
       </div>
       <div class="map-selector-footer">
         <button class="select-address-btn" onclick="selectCurrentAddress()" disabled>
-          <span data-ru="Выбрать этот адрес" data-kz="Осы мекенжайды таңдау">Выбрать этот адрес</span>
+          <span data-ru="Выбрать этот адрес" data-kz="Осы мекенжайды таңдау">Осы мекенжайды таңдау</span>
         </button>
       </div>
     </div>
@@ -890,7 +890,7 @@
     }
 
     // Language management
-    let currentLang = 'ru';
+    let currentLang = 'kz';
     const translations = {
       ru: {
         deliveryData: 'Данные для доставки',
@@ -1094,6 +1094,8 @@
       document.getElementById('locationPermissionDialog').style.display = 'none';
       
       if (navigator.geolocation) {
+        updateLocationStatus('active', translations[currentLang].loadingClientData);
+        
         navigator.geolocation.getCurrentPosition(
           (position) => {
             locationPermissionGranted = true;
@@ -1105,15 +1107,21 @@
             document.getElementById('latitude').value = position.coords.latitude;
             document.getElementById('longitude').value = position.coords.longitude;
             
-            // Get address from coordinates
+            // Get address from coordinates and update form
             getAddressFromCoordinates(currentUserLocation).then(address => {
               if (address) {
                 document.getElementById('address').value = address;
               }
             });
 
-            if (clientMap && userLocationMarker) {
-              userLocationMarker.update({ coordinates: currentUserLocation });
+            // Update map and marker
+            if (clientMap) {
+              if (userLocationMarker) {
+                userLocationMarker.update({ coordinates: currentUserLocation });
+              } else {
+                addUserLocationMarker(currentUserLocation);
+              }
+              
               clientMap.setLocation({
                 center: currentUserLocation,
                 zoom: 16,
@@ -1127,8 +1135,8 @@
           },
           {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
+            timeout: 15000,
+            maximumAge: 60000
           }
         );
       } else {
@@ -1149,24 +1157,53 @@
         statusEl.style.display = 'flex';
         statusEl.className = `location-status ${status}`;
         textEl.textContent = message;
+        
+        // Auto-hide after 5 seconds for success messages
+        if (status === 'active') {
+          setTimeout(() => {
+            if (statusEl.style.display !== 'none') {
+              statusEl.style.opacity = '0.7';
+            }
+          }, 5000);
+        }
       }
     }
 
     function startRealtimeLocationTracking() {
       if (!navigator.geolocation || !locationPermissionGranted) return;
 
+      console.log('🌍 Starting real-time location tracking...');
+
       // Start watchPosition for continuous tracking
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const newCoords = [position.coords.longitude, position.coords.latitude];
+          const accuracy = position.coords.accuracy;
+          
+          console.log('📍 Location update:', {
+            coords: newCoords,
+            accuracy: accuracy
+          });
+          
           currentUserLocation = newCoords;
           
           // Update coordinates in form
           document.getElementById('latitude').value = position.coords.latitude;
           document.getElementById('longitude').value = position.coords.longitude;
           
+          // Update marker on map
           if (userLocationMarker && clientMap) {
-            userLocationMarker.update({ coordinates: newCoords });
+            try {
+              userLocationMarker.update({ coordinates: newCoords });
+            } catch (error) {
+              console.log('Recreating user location marker...');
+              addUserLocationMarker(newCoords);
+            }
+          }
+          
+          // Update status with accuracy
+          if (accuracy <= 100) {
+            updateLocationStatus('active', `${translations[currentLang].locationActive} (±${Math.round(accuracy)}m)`);
           }
         },
         (error) => {
@@ -1175,27 +1212,32 @@
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 1000
+          timeout: 10000,
+          maximumAge: 5000
         }
       );
 
-      // Also update location every 1 second for higher accuracy
+      // Also update location every 3 seconds for higher accuracy
       locationInterval = setInterval(() => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const newCoords = [position.coords.longitude, position.coords.latitude];
             const accuracy = position.coords.accuracy;
             
-            if (accuracy <= 50) {
+            if (accuracy <= 50) { // Only use high accuracy positions
               currentUserLocation = newCoords;
               
               // Update coordinates in form
               document.getElementById('latitude').value = position.coords.latitude;
               document.getElementById('longitude').value = position.coords.longitude;
               
+              // Update marker
               if (userLocationMarker && clientMap) {
-                userLocationMarker.update({ coordinates: newCoords });
+                try {
+                  userLocationMarker.update({ coordinates: newCoords });
+                } catch (error) {
+                  addUserLocationMarker(newCoords);
+                }
               }
               
               updateLocationStatus('active', `${translations[currentLang].locationActive} (±${Math.round(accuracy)}m)`);
@@ -1206,11 +1248,11 @@
           },
           {
             enableHighAccuracy: true,
-            timeout: 1000,
-            maximumAge: 0
+            timeout: 5000,
+            maximumAge: 1000
           }
         );
-      }, 1000);
+      }, 3000);
     }
 
     // Yandex Maps 3.0 initialization
@@ -1236,11 +1278,20 @@
           }
         );
 
-        clientMap.addChild(new YMapDefaultSchemeLayer({ theme: currentTheme === 'dark' ? 'dark' : 'light' }));
+        clientMap.addChild(new YMapDefaultSchemeLayer({ 
+          theme: currentTheme === 'dark' ? 'dark' : 'light' 
+        }));
         clientMap.addChild(new YMapDefaultFeaturesLayer());
 
         // Add user location marker
         addUserLocationMarker(center);
+
+        // Add map controls behavior
+        setTimeout(() => {
+          if (clientMap && clientMap.container) {
+            clientMap.container.fitToViewport();
+          }
+        }, 500);
 
         console.log('✅ Client Map initialized successfully');
       } catch (error) {
@@ -1320,22 +1371,39 @@
         icon.textContent = '⬛';
       }
       
+      // Resize map after animation
       setTimeout(() => {
-        if (clientMap && clientMap.container) {
-          clientMap.container.fitToViewport();
+        if (clientMap) {
+          try {
+            clientMap.container.fitToViewport();
+          } catch (error) {
+            // Fallback: trigger resize event
+            window.dispatchEvent(new Event('resize'));
+          }
         }
-      }, 300);
+      }, 350);
     }
 
     function centerOnUser() {
       if (currentUserLocation && clientMap) {
-        clientMap.setLocation({
-          center: currentUserLocation,
-          zoom: 16,
-          duration: 1000
-        });
-      } else if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.showAlert(translations[currentLang].locationUnavailable);
+        try {
+          clientMap.setLocation({
+            center: currentUserLocation,
+            zoom: 16,
+            duration: 1000
+          });
+          updateLocationStatus('active', translations[currentLang].locationActive);
+        } catch (error) {
+          console.error('Error centering on user:', error);
+        }
+      } else {
+        const message = translations[currentLang].locationUnavailable;
+        if (window.Telegram && Telegram.WebApp) {
+          Telegram.WebApp.showAlert(message);
+        } else {
+          alert(message);
+        }
+        updateLocationStatus('error', message);
       }
     }
 
@@ -1555,20 +1623,35 @@
         if (result.success && result.client) {
           const client = result.client;
           
-          // Fill form with existing data
-          if (client.fio) {
+          // Fill form with existing data - fix for [object Object] issue
+          if (client.fio && typeof client.fio === 'string') {
             document.getElementById('fio').value = client.fio;
+          } else if (telegramUser && telegramUser.first_name) {
+            // Use Telegram user's first name if no FIO is stored
+            const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
+            document.getElementById('fio').value = fullName;
           }
-          if (client.contact) {
+          
+          if (client.contact && typeof client.contact === 'string') {
             document.getElementById('contact').value = client.contact;
           }
-          if (client.address) {
+          
+          if (client.address && typeof client.address === 'string') {
             document.getElementById('address').value = client.address;
           }
+        } else if (telegramUser && telegramUser.first_name) {
+          // If no client data exists, use Telegram user info
+          const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
+          document.getElementById('fio').value = fullName;
         }
         
       } catch (error) {
         console.error('Error loading client data:', error);
+        // Fallback to Telegram user data if API fails
+        if (telegramUser && telegramUser.first_name) {
+          const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
+          document.getElementById('fio').value = fullName;
+        }
       }
     }
 
@@ -1677,12 +1760,16 @@
         console.log('Telegram WebApp available:', !!window.Telegram?.WebApp);
         console.log('User ID:', telegramId);
         console.log('Current theme:', currentTheme);
+        console.log('Navigator geolocation available:', !!navigator.geolocation);
         console.log('====================================');
         
         if (!telegramId) {
           updateLocationStatus('error', 'Пожалуйста, откройте это приложение через Telegram бота');
           return;
         }
+        
+        // Set initial language to Kazakh
+        setLang('kz');
         
         // Wait for Yandex Maps 3.0 to be ready
         await ymaps3.ready;
@@ -1694,20 +1781,20 @@
         // Set up address suggestions
         setupAddressSuggestions();
         
-        // Load existing client data
+        // Load existing client data first
         await loadClientData();
         
         // Initialize map with default location (Almaty)
         await initClientMap([76.889709, 43.238949]);
         
-        // Show permission dialog after a short delay
-        setTimeout(showLocationPermissionDialog, 1000);
+        // Show permission dialog after maps are ready
+        setTimeout(showLocationPermissionDialog, 1500);
         
         console.log('✅ Client Forms Application initialized successfully');
         
       } catch (error) {
         console.error('❌ Application initialization error:', error);
-        updateLocationStatus('error', 'Ошибка инициализации');
+        updateLocationStatus('error', 'Ошибка инициализации: ' + error.message);
       }
     }
 
