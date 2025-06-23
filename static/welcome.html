@@ -640,6 +640,15 @@
 
         console.log('💳 Checking payment status for user:', telegramId);
 
+        // Check if user is admin first
+        const adminId = 800703982;
+        if (telegramId == adminId) {
+          console.log('👑 Admin user detected');
+          showAdminButton();
+          hideLoading();
+          return;
+        }
+
         const response = await fetch('/api/check', {
           method: 'POST',
           headers: {
@@ -689,10 +698,23 @@
       document.getElementById('loadingContainer').style.display = 'none';
     }
 
+    function showAdminButton() {
+      const btn = document.getElementById('continueBtn');
+      btn.style.display = 'inline-flex';
+      btn.innerHTML = `
+        <span>👑</span>
+        <span data-ru="Админ панель" data-kz="Админ панелі">Админ панелі</span>
+      `;
+      btn.onclick = () => {
+        window.location.href = '/admin';
+      };
+    }
+
     function showContinueButton() {
       const btn = document.getElementById('continueBtn');
       btn.style.display = 'inline-flex';
       btn.querySelector('span:last-child').textContent = translations[currentLang].proceedDelivery;
+      btn.onclick = proceedToForms;
     }
 
     function proceedToForms() {

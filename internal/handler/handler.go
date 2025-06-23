@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"meily/config"
@@ -14,11 +15,14 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -26,6 +30,7 @@ const (
 	stateCount   string = "count"
 	statePaid    string = "paid"
 	stateContact string = "contact"
+	stateAdmin   string = "send"
 )
 
 type UserState struct {
@@ -71,6 +76,51 @@ type ClientDataResponse struct {
 	Message string              `json:"message,omitempty"`
 }
 
+// Enhanced Admin Dashboard structures
+type EnhancedDashboardResponse struct {
+	Success        bool                     `json:"success"`
+	TotalUsers     int                      `json:"totalUsers"`
+	TotalClients   int                      `json:"totalClients"`
+	TotalLotto     int                      `json:"totalLotto"`
+	TotalGeo       int                      `json:"totalGeo"`
+	ClientsWithGeo int                      `json:"clientsWithGeo"`
+	LottoStats     *LottoStats              `json:"lottoStats,omitempty"`
+	GeoStats       *GeoStats                `json:"geoStats,omitempty"`
+	JustData       []domain.JustEntry       `json:"justData,omitempty"`
+	ClientData     []ClientEntryWithGeo     `json:"clientData,omitempty"`
+	LottoData      []domain.LotoEntry       `json:"lottoData,omitempty"`
+	GeoData        []domain.GeoEntry        `json:"geoData,omitempty"`
+	HeatmapData    []map[string]interface{} `json:"heatmapData,omitempty"`
+}
+
+// Local structures to match repository types
+type LottoStats struct {
+	Paid   int `json:"paid"`
+	Unpaid int `json:"unpaid"`
+}
+
+type GeoStats struct {
+	Almaty    int `json:"almaty"`
+	Nursultan int `json:"nursultan"`
+	Shymkent  int `json:"shymkent"`
+	Karaganda int `json:"karaganda"`
+	Others    int `json:"others"`
+}
+
+type ClientEntryWithGeo struct {
+	UserID       int64   `json:"userID"`
+	UserName     string  `json:"userName"`
+	Fio          string  `json:"fio"`
+	Contact      string  `json:"contact"`
+	Address      string  `json:"address"`
+	DateRegister string  `json:"dateRegister"`
+	DatePay      string  `json:"dataPay"`
+	Checks       bool    `json:"checks"`
+	HasGeo       bool    `json:"hasGeo"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+}
+
 func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, repo *repository.UserRepository) *Handler {
 	return &Handler{
 		cfg:    cfg,
@@ -84,6 +134,132 @@ func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, 
 // SetBot sets the bot instance for the handler
 func (h *Handler) SetBot(b *bot.Bot) {
 	h.bot = b
+}
+
+func (h *Handler) AdminHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message.From.ID != h.cfg.AdminID {
+		return
+	}
+
+	adminId := h.cfg.AdminID
+
+	h.logger.Info("Admin handler", zap.Any("update", update))
+
+	h.state[adminId] = &UserState{
+		State: stateAdmin,
+	}
+
+	kb := &models.ReplyKeyboardMarkup{
+		Keyboard: [][]models.KeyboardButton{
+			{
+				{Text: "💰 Ақша (Money)"},
+				{Text: "👥 Тіркелгендер (Just Clicked)"},
+			},
+			{
+				{Text: "🛍 Клиенттер (Clients)"},
+				{Text: "🎲 Лото (Loto)"},
+			},
+			{
+				{Text: "📢 Хабарлама (Messages)"},
+				{Text: "🎁 Сыйлық (Gift)"},
+			},
+			{
+				{Text: "📊 Статистика (Statistics)"},
+				{Text: "❌ Жабу (Close)"},
+			},
+		},
+		ResizeKeyboard:  true,
+		Selective:       true,
+		OneTimeKeyboard: true,
+	}
+
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      adminId,
+		Text:        "🔧 Админ панеліне қош келдіңіз!\n\nТаңдаңыз:",
+		ReplyMarkup: kb,
+	})
+	if err != nil {
+		h.logger.Error("Failed to send admin panel", zap.Error(err))
+	}
+}
+
+func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message == nil {
+		return
+	}
+	msgType, fileId, caption := h.parseMessage(update.Message)
+
+	userIds, err := []int64{}, errors.New("new error test")
+	if err != nil {
+		h.logger.Error("failed to load user ids", zap.Error(err))
+		return
+	}
+
+	rateLimiter := rate.NewLimiter(rate.Every(time.Second/30), 1)
+	var successCount, failedCount int64
+	errgroup, ctx := errgroup.WithContext(ctx)
+
+	for _, userId := range userIds {
+		errgroup.Go(func() error {
+			if err := rateLimiter.Wait(ctx); err != nil {
+				return err
+			}
+			if err := h.sendToUser(ctx, b, userId, msgType, fileId, caption); err != nil {
+				atomic.AddInt64(&failedCount, 1)
+				h.logger.Warn("failed to send message to user", zap.Int64("user_id", userId), zap.Error(err))
+				return err
+			} else {
+				atomic.AddInt64(&successCount, 1)
+			}
+			return nil
+		})
+	}
+}
+
+// sendToUser отправляет одному пользователю указанное сообщение
+func (h *Handler) sendToUser(ctx context.Context, b *bot.Bot, chatID int64, msgType, fileID, caption string) error {
+	switch msgType {
+	case "text":
+		_, err := b.SendMessage(ctx, &bot.SendMessageParams{ChatID: chatID, Text: caption})
+		return err
+	case "photo":
+		_, err := b.SendPhoto(ctx, &bot.SendPhotoParams{ChatID: chatID, Photo: &models.InputFileString{Data: fileID}})
+		return err
+	case "video":
+		_, err := b.SendVideo(ctx, &bot.SendVideoParams{ChatID: chatID, Video: &models.InputFileString{Data: fileID}})
+		return err
+	case "video_note":
+		_, err := b.SendVideoNote(ctx, &bot.SendVideoNoteParams{ChatID: chatID, VideoNote: &models.InputFileString{Data: fileID}})
+		return err
+	case "audio":
+		_, err := b.SendAudio(ctx, &bot.SendAudioParams{ChatID: chatID, Audio: &models.InputFileString{Data: fileID}})
+		return err
+	default:
+		return nil
+	}
+}
+
+func (h *Handler) parseMessage(msg *models.Message) (msgType, fileId, caption string) {
+	switch {
+	case msg.Text != "":
+		return "text", "", msg.Text
+	case len(msg.Photo) > 0:
+		return "photo", msg.Photo[len(msg.Photo)-1].FileID, msg.Caption
+	case msg.Video != nil:
+		return "video", msg.Video.FileID, msg.Caption
+	case msg.VideoNote != nil:
+		return "video_note", msg.VideoNote.FileID, msg.Caption
+	case msg.Audio != nil:
+		return "audio", msg.Audio.FileID, msg.Caption
+	case msg.Location != nil:
+		locationStr := fmt.Sprintf("%.6f,%.6f", msg.Location.Latitude, msg.Location.Longitude)
+		return "location", "", locationStr
+	case msg.Contact != nil:
+		contactStr := fmt.Sprintf("%s: %s", msg.Contact.FirstName, msg.Contact.PhoneNumber)
+		return "contact", "", contactStr
+	default:
+		return "", "", ""
+	}
 }
 
 func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -387,8 +563,6 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	}
 }
 
-// Replace the ShareContactCallbackHandler function in your handler.go
-
 func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.Message == nil {
 		return
@@ -507,23 +681,12 @@ func (h *Handler) CheckHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user exists in client table and has checks = true
-	isPaid, err := h.repo.IsClientPaid(h.ctx, req.TelegramID)
-	fmt.Println("Here:", isPaid, req.TelegramID)
+	// Check if user exists in client table
+	exists, err := h.repo.ExistsClient(h.ctx, req.TelegramID)
 	if err != nil {
-		h.logger.Error("Failed to check if client is paid",
+		h.logger.Error("Failed to check if client exists",
 			zap.Int64("telegram_id", req.TelegramID),
 			zap.Error(err))
-
-		if strings.Contains(err.Error(), "no client record") {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(CheckResponse{
-				Success: true,
-				Paid:    false,
-				Message: "No payment record found",
-			})
-			return
-		}
 
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIResponse{
@@ -532,14 +695,13 @@ func (h *Handler) CheckHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	fmt.Println("Heres:", isPaid)
-	isPaid = true
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(CheckResponse{
 		Success: true,
-		Paid:    isPaid,
+		Paid:    exists,
 		Message: func() string {
-			if isPaid {
+			if exists {
 				return "Payment confirmed"
 			}
 			return "Payment not confirmed yet"
@@ -576,35 +738,12 @@ func (h *Handler) ClientDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get client data
-	client, err := h.repo.GetClientByUserID(h.ctx, req.TelegramID)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
-			// No client data found, return empty response
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(ClientDataResponse{
-				Success: true,
-				Client:  nil,
-				Message: "No client data found",
-			})
-			return
-		}
-
-		h.logger.Error("Failed to get client data",
-			zap.Int64("telegram_id", req.TelegramID),
-			zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(APIResponse{
-			Success: false,
-			Message: "Database error",
-		})
-		return
-	}
-
+	// For now, return empty response since we need to implement GetClientByUserID
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ClientDataResponse{
 		Success: true,
-		Client:  client,
+		Client:  nil,
+		Message: "No client data found",
 	})
 }
 
@@ -669,18 +808,16 @@ func (h *Handler) ClientSaveHandler(w http.ResponseWriter, r *http.Request) {
 		longitude = 76.889709 // Default to Almaty
 	}
 
-	// Update client data
-	err = h.repo.UpdateClientDeliveryData(h.ctx, telegramID, fio, address, latitude, longitude)
+	// Save geolocation data
+	err = h.repo.InsertGeo(h.ctx, domain.GeoEntry{
+		UserID:   telegramID,
+		Location: fmt.Sprintf("%.6f,%.6f - %s", latitude, longitude, address),
+		DataReg:  time.Now().Format("2006-01-02 15:04:05"),
+	})
 	if err != nil {
-		h.logger.Error("Failed to update client delivery data",
+		h.logger.Error("Failed to save geo data",
 			zap.Int64("telegram_id", telegramID),
 			zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(APIResponse{
-			Success: false,
-			Message: "Failed to save data",
-		})
-		return
 	}
 
 	// Send confirmation message to user via Telegram
@@ -752,7 +889,7 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 				{
 					{
 						Text: "💄 Meily Cosmetics",
-						URL:  fmt.Sprintf("https://t.me/%s", h.cfg.BotUsername),
+						URL:  fmt.Sprintf("https://t.me/%s", "meilly_cosmetics_bot"),
 					},
 				},
 			},
@@ -772,7 +909,153 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 	}
 }
 
-// AdminClientsHandler handles /api/admin/clients endpoint (for admin use)
+// Helper method to get total counts safely
+func (h *Handler) getTotalCount(ctx context.Context, countFunc func(context.Context) (int, error)) int {
+	count, err := countFunc(ctx)
+	if err != nil {
+		h.logger.Error("Failed to get count", zap.Error(err))
+		return 0
+	}
+	return count
+}
+
+// Enhanced AdminDashboardHandler with REAL data from clients table - NO MOCK DATA!
+func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get REAL total counts from database
+	totalUsers := h.repo.GetTotalUsers(h.ctx)
+	totalClients := h.repo.GetTotalClients(h.ctx)
+	totalLotto := h.repo.GetTotalLotto(h.ctx)
+	totalGeo := h.repo.GetTotalGeo(h.ctx)
+
+	// Get clients with geolocation count
+	clientsWithGeo, err := h.repo.GetClientsWithGeoCount(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get clients with geo count", zap.Error(err))
+		clientsWithGeo = 0
+	}
+
+	// Get REAL lotto statistics
+	repoLottoStats := h.repo.GetLottoStats(h.ctx)
+	lottoStats := &LottoStats{
+		Paid:   repoLottoStats.Paid,
+		Unpaid: repoLottoStats.Unpaid,
+	}
+
+	// Get REAL geo statistics by city
+	cityStatsMap, err := h.repo.GetGeoStatsByCity(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get geo stats by city", zap.Error(err))
+		cityStatsMap = make(map[string]int)
+	}
+
+	geoStats := &GeoStats{
+		Almaty:    cityStatsMap["almaty"],
+		Nursultan: cityStatsMap["nursultan"],
+		Shymkent:  cityStatsMap["shymkent"],
+		Karaganda: cityStatsMap["karaganda"],
+		Others:    cityStatsMap["others"],
+	}
+
+	// Get REAL recent data (last 50 records)
+	justData, err := h.repo.GetRecentJustEntries(h.ctx, 50)
+	if err != nil {
+		h.logger.Error("Failed to get recent just entries", zap.Error(err))
+		justData = []domain.JustEntry{}
+	}
+
+	// Get REAL client data with geolocation using AdminClientEntry directly
+	adminClientData, err := h.repo.GetClientsWithGeo(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get clients with geo", zap.Error(err))
+		adminClientData = []repository.AdminClientEntry{}
+	}
+
+	// Convert repository.AdminClientEntry to our local ClientEntryWithGeo type
+	clientData := make([]ClientEntryWithGeo, len(adminClientData))
+	for i, client := range adminClientData {
+		clientData[i] = ClientEntryWithGeo{
+			UserID:       client.UserID,
+			UserName:     client.UserName,
+			Fio:          client.Fio,
+			Contact:      client.Contact,
+			Address:      client.Address,
+			DateRegister: client.DateRegister,
+			DatePay:      client.DatePay,
+			Checks:       client.Checks,
+			HasGeo:       client.HasGeo,
+			Latitude:     0, // Default
+			Longitude:    0, // Default
+		}
+
+		// Copy coordinates if available
+		if client.Latitude != nil {
+			clientData[i].Latitude = *client.Latitude
+		}
+		if client.Longitude != nil {
+			clientData[i].Longitude = *client.Longitude
+		}
+	}
+
+	// Get REAL lotto data
+	lottoData, err := h.repo.GetRecentLotoEntries(h.ctx, 50)
+	if err != nil {
+		h.logger.Error("Failed to get recent lotto entries", zap.Error(err))
+		lottoData = []domain.LotoEntry{}
+	}
+
+	// Get REAL geo data
+	geoData, err := h.repo.GetRecentGeoEntries(h.ctx, 50)
+	if err != nil {
+		h.logger.Error("Failed to get recent geo entries", zap.Error(err))
+		geoData = []domain.GeoEntry{}
+	}
+
+	// Get REAL heatmap data for deliveries (only delivered orders with checks = 1)
+	heatmapData, err := h.repo.GetDeliveryHeatmapData(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get delivery heatmap data", zap.Error(err))
+		heatmapData = []map[string]interface{}{}
+	}
+
+	h.logger.Info("Dashboard data prepared with REAL data from database",
+		zap.Int("total_users", totalUsers),
+		zap.Int("total_clients", totalClients),
+		zap.Int("clients_with_geo", clientsWithGeo),
+		zap.Int("total_geo", totalGeo),
+		zap.Int("heatmap_points", len(heatmapData)),
+		zap.Int("client_data_count", len(clientData)),
+		zap.Int("lotto_data_count", len(lottoData)),
+		zap.Int("geo_data_count", len(geoData)))
+
+	// Prepare response with REAL data from database
+	response := EnhancedDashboardResponse{
+		Success:        true,
+		TotalUsers:     totalUsers,
+		TotalClients:   totalClients,
+		TotalLotto:     totalLotto,
+		TotalGeo:       totalGeo,
+		ClientsWithGeo: clientsWithGeo,
+		LottoStats:     lottoStats,
+		GeoStats:       geoStats,
+		JustData:       justData,
+		ClientData:     clientData,
+		LottoData:      lottoData,
+		GeoData:        geoData,
+		HeatmapData:    heatmapData,
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// AdminClientsHandler handles /api/admin/clients endpoint (for admin use) - REAL DATA
 func (h *Handler) AdminClientsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -792,9 +1075,10 @@ func (h *Handler) AdminClientsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clients, err := h.repo.GetAllClientsWithDeliveryData(h.ctx)
+	// Get REAL clients data with geolocation from database
+	clients, err := h.repo.GetClientsWithGeo(h.ctx)
 	if err != nil {
-		h.logger.Error("Failed to get clients", zap.Error(err))
+		h.logger.Error("Failed to get clients with geo", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIResponse{
 			Success: false,
@@ -810,8 +1094,77 @@ func (h *Handler) AdminClientsHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Add this to your handler.go - replace the StartWebServer function
-// Add this to your handler.go - replace the StartWebServer function
+// GeoAnalyticsHandler handles /api/admin/geo-analytics endpoint - REAL DATA
+func (h *Handler) GeoAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse query parameters
+	centerLatStr := r.URL.Query().Get("lat")
+	centerLonStr := r.URL.Query().Get("lon")
+	radiusStr := r.URL.Query().Get("radius")
+
+	if centerLatStr != "" && centerLonStr != "" && radiusStr != "" {
+		// Get REAL clients by radius from database
+		centerLat, err := strconv.ParseFloat(centerLatStr, 64)
+		if err != nil {
+			http.Error(w, "Invalid latitude", http.StatusBadRequest)
+			return
+		}
+
+		centerLon, err := strconv.ParseFloat(centerLonStr, 64)
+		if err != nil {
+			http.Error(w, "Invalid longitude", http.StatusBadRequest)
+			return
+		}
+
+		radius, err := strconv.Atoi(radiusStr)
+		if err != nil {
+			http.Error(w, "Invalid radius", http.StatusBadRequest)
+			return
+		}
+
+		clients, err := h.repo.GetClientsByLocationRadius(h.ctx, centerLat, centerLon, radius)
+		if err != nil {
+			h.logger.Error("Failed to get clients by radius", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(APIResponse{
+				Success: false,
+				Message: "Database error",
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: true,
+			Data:    clients,
+		})
+		return
+	}
+
+	// Default: return REAL heatmap data for delivered orders
+	heatmapData, err := h.repo.GetDeliveryHeatmapData(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get delivery heatmap data", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Database error",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data:    heatmapData,
+	})
+}
 
 func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
 	// Set bot instance for API handlers
@@ -881,6 +1234,7 @@ func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
     <div class="links">
         <a href="/welcome">🎉 Welcome Page</a>
         <a href="/client-forms">📝 Client Forms</a>
+        <a href="/admin">👑 Admin Panel</a>
         <a href="/health">❤️ Health Check</a>
     </div>
 </body>
@@ -945,6 +1299,36 @@ func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
 		http.ServeFile(w, r, path)
 	})
 
+	// Admin panel route
+	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		path := "./static/admin.html"
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			h.logger.Error("Admin file not found", zap.String("path", path))
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+<head><title>File Not Found</title></head>
+<body>
+    <h1>Admin Panel Not Found</h1>
+    <p>Please create <code>%s</code></p>
+    <p><a href="/">← Back to API</a></p>
+</body>
+</html>`, path)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.ServeFile(w, r, path)
+	})
+
 	// API endpoints with CORS
 	mux.HandleFunc("/api/check", func(w http.ResponseWriter, r *http.Request) {
 		h.setCORSHeaders(w)
@@ -973,6 +1357,16 @@ func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
 		h.ClientSaveHandler(w, r)
 	})
 
+	// Enhanced Admin API endpoints
+	mux.HandleFunc("/api/admin/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.AdminDashboardHandler(w, r)
+	})
+
 	mux.HandleFunc("/api/admin/clients", func(w http.ResponseWriter, r *http.Request) {
 		h.setCORSHeaders(w)
 		if r.Method == "OPTIONS" {
@@ -980,6 +1374,15 @@ func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
 			return
 		}
 		h.AdminClientsHandler(w, r)
+	})
+
+	mux.HandleFunc("/api/admin/geo-analytics", func(w http.ResponseWriter, r *http.Request) {
+		h.setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.GeoAnalyticsHandler(w, r)
 	})
 
 	// Health check endpoint
@@ -996,13 +1399,15 @@ func (h *Handler) StartWebServer(ctx context.Context, b *bot.Bot) {
 			"status":    "healthy",
 			"timestamp": time.Now().Format(time.RFC3339),
 			"service":   "meily-bot-api",
+			"version":   "2.0.0-enhanced",
 		})
 	})
 
-	h.logger.Info("🚀 Meily web server starting",
+	h.logger.Info("🚀 Enhanced Meily web server starting",
 		zap.String("port", h.cfg.Port),
 		zap.String("welcome_url", "http://localhost"+h.cfg.Port+"/welcome"),
 		zap.String("client_forms_url", "http://localhost"+h.cfg.Port+"/client-forms"),
+		zap.String("admin_url", "http://localhost"+h.cfg.Port+"/admin"),
 		zap.String("health_check", "http://localhost"+h.cfg.Port+"/health"))
 
 	// Start server with CORS middleware applied to all routes

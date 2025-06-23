@@ -49,6 +49,8 @@ func main() {
 		bot.WithDefaultHandler(handl.DefaultHandler),
 		bot.WithCallbackQueryDataHandler("buy_cosmetics", bot.MatchTypePrefix, handl.BuyCosmeticsCallbackHandler),
 		bot.WithCallbackQueryDataHandler("count_", bot.MatchTypePrefix, handl.CountHandler),
+
+		bot.WithMessageTextHandler("/admin", bot.MatchTypeExact, handl.AdminHandler),
 	}
 
 	b, err := bot.New(cfg.Token, opts...)
