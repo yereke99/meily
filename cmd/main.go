@@ -51,6 +51,7 @@ func main() {
 		bot.WithCallbackQueryDataHandler("count_", bot.MatchTypePrefix, handl.CountHandler),
 
 		bot.WithMessageTextHandler("/admin", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("📢 Хабарлама (Messages)", bot.MatchTypeExact, handl.AdminHandler),
 	}
 
 	b, err := bot.New(cfg.Token, opts...)

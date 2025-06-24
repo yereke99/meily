@@ -65,6 +65,26 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 //                                 EXISTING METHODS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// GetAllJustUserIDs returns all user IDs from just table
+func (r *UserRepository) GetAllJustUserIDs(ctx context.Context) ([]int64, error) {
+	const q = `SELECT id_user FROM just ORDER BY dataRegistred DESC;`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userIDs []int64
+	for rows.Next() {
+		var userID int64
+		if err := rows.Scan(&userID); err != nil {
+			continue
+		}
+		userIDs = append(userIDs, userID)
+	}
+	return userIDs, nil
+}
+
 // InsertJust вставляет запись в таблицу just.
 func (r *UserRepository) InsertJust(ctx context.Context, e domain.JustEntry) error {
 	const q = `
