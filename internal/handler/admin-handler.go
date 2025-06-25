@@ -3,13 +3,13 @@ package handler
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
 
@@ -19,7 +19,6 @@ func (h *Handler) AdminHandler(ctx context.Context, b *bot.Bot, update *models.U
 	}
 
 	adminId := h.cfg.AdminID
-
 	h.logger.Info("Admin handler", zap.Any("update", update))
 
 	state, ok := h.state[adminId]
@@ -196,54 +195,28 @@ func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Up
 		return
 	}
 
-	rateLimiter := rate.NewLimiter(rate.Every(time.Second/29), 1)
+	limiter := rate.NewLimiter(rate.Every(time.Second/30), 1)
+
+	var wg sync.WaitGroup
 	var successCount, failedCount int64
-
-	errgroup, ctx := errgroup.WithContext(ctx)
-	errgroup.SetLimit(10)
-
-	for i, userId := range userIds {
-		usrId := userId
-		errgroup.Go(func() error {
-			if err := rateLimiter.Wait(ctx); err != nil {
-				return err
-			}
-
-			if err := h.sendToUser(ctx, b, usrId, msgType, fileId, caption); err != nil {
+	for i := 0; i < len(userIds); i++ {
+		if err := limiter.Wait(ctx); err != nil {
+			h.logger.Error("Rate limiter wait error", zap.Error(err))
+			break
+		}
+		wg.Add(1)
+		go func(userId int64) {
+			defer wg.Done()
+			if err := h.sendToUser(ctx, b, userId, msgType, fileId, caption); err != nil {
 				atomic.AddInt64(&failedCount, 1)
-				h.logger.Warn("Failed to send message to user",
-					zap.Int64("user_id", userId),
-					zap.Error(err))
-				return nil
+				h.logger.Warn("Failed to send message to user", zap.Int64("user", userId), zap.Error(err))
 			} else {
 				atomic.AddInt64(&successCount, 1)
 			}
-			return nil
-		})
-
-		if (i+1)%10 == 0 {
-			currentSuccess := atomic.LoadInt64(&successCount)
-			currentFailed := atomic.LoadInt64(&failedCount)
-			progressText := fmt.Sprintf("📤 Хабарлама жіберіліп жатыр...\n👥 Жалпы: %d\n✅ Жіберілді: %d\n❌ Қате: %d\n📊 Прогресс: %.1f%%",
-				len(userIds),
-				currentSuccess,
-				currentFailed,
-				float64(currentSuccess+currentFailed)/float64(len(userIds))*100)
-
-			if statusMsg != nil {
-				b.EditMessageText(ctx, &bot.EditMessageTextParams{
-					ChatID:    adminId,
-					MessageID: statusMsg.ID,
-					Text:      progressText,
-				})
-			}
-		}
+		}(userIds[i])
 	}
 
-	if err := errgroup.Wait(); err != nil {
-		h.logger.Error("Broadcast completed with errors", zap.Error(err))
-	}
-
+	wg.Wait()
 	// Send final results
 	finalSuccess := atomic.LoadInt64(&successCount)
 	finalFailed := atomic.LoadInt64(&failedCount)
