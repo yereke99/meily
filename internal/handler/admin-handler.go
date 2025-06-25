@@ -470,22 +470,22 @@ func (h *Handler) handleCloseAdmin(ctx context.Context, b *bot.Bot) {
 func (h *Handler) sendToUser(ctx context.Context, b *bot.Bot, chatID int64, msgType, fileID, caption string) error {
 	switch msgType {
 	case "text":
-		_, err := b.SendMessage(ctx, &bot.SendMessageParams{ChatID: chatID, Text: caption})
+		_, err := b.SendMessage(ctx, &bot.SendMessageParams{ChatID: chatID, Text: caption, ProtectContent: true})
 		return err
 	case "photo":
-		_, err := b.SendPhoto(ctx, &bot.SendPhotoParams{ChatID: chatID, Photo: &models.InputFileString{Data: fileID}, Caption: caption})
+		_, err := b.SendPhoto(ctx, &bot.SendPhotoParams{ChatID: chatID, Photo: &models.InputFileString{Data: fileID}, Caption: caption, ProtectContent: true})
 		return err
 	case "video":
-		_, err := b.SendVideo(ctx, &bot.SendVideoParams{ChatID: chatID, Video: &models.InputFileString{Data: fileID}, Caption: caption})
+		_, err := b.SendVideo(ctx, &bot.SendVideoParams{ChatID: chatID, Video: &models.InputFileString{Data: fileID}, Caption: caption, ProtectContent: true})
 		return err
 	case "document":
-		_, err := b.SendDocument(ctx, &bot.SendDocumentParams{ChatID: chatID, Document: &models.InputFileString{Data: fileID}, Caption: caption})
+		_, err := b.SendDocument(ctx, &bot.SendDocumentParams{ChatID: chatID, Document: &models.InputFileString{Data: fileID}, Caption: caption, ProtectContent: true})
 		return err
 	case "video_note":
-		_, err := b.SendVideoNote(ctx, &bot.SendVideoNoteParams{ChatID: chatID, VideoNote: &models.InputFileString{Data: fileID}})
+		_, err := b.SendVideoNote(ctx, &bot.SendVideoNoteParams{ChatID: chatID, VideoNote: &models.InputFileString{Data: fileID}, ProtectContent: true})
 		return err
 	case "audio":
-		_, err := b.SendAudio(ctx, &bot.SendAudioParams{ChatID: chatID, Audio: &models.InputFileString{Data: fileID}})
+		_, err := b.SendAudio(ctx, &bot.SendAudioParams{ChatID: chatID, Audio: &models.InputFileString{Data: fileID}, ProtectContent: true})
 		return err
 	default:
 		return nil
