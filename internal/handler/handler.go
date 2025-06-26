@@ -9,6 +9,7 @@ import (
 	"meily/config"
 	"meily/internal/domain"
 	"meily/internal/repository"
+	"meily/internal/service"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -348,8 +349,7 @@ func (h *Handler) CountHandler(ctx context.Context, b *bot.Bot, update *models.U
 		return
 	}
 
-	var totalSum int
-	totalSum = userCount * h.cfg.Cost
+	totalSum := userCount * h.cfg.Cost
 
 	userID := update.CallbackQuery.From.ID
 	newState := &domain.UserState{
@@ -435,6 +435,14 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		h.logger.Error("Failed to save PDF file", zap.Error(err))
 		return
 	}
+	h.logger.Info("PDF file saved", zap.String("path", savePath))
+
+	result, err := service.ReadPDF(savePath)
+	if err != nil {
+		h.logger.Warn("Failed to read PDF file", zap.Error(err))
+	}
+
+	fmt.Println(result[0])
 
 	state, err := h.redisRepo.GetUserState(ctx, userID)
 	if err != nil {
