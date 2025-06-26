@@ -6,6 +6,14 @@ import (
 	"database/sql"
 )
 
+type UserState struct {
+	State         string `json:"state"`
+	BroadCastType string `json:"broadcast_type"`
+	Count         int    `json:"count"`
+	Contact       string `json:"contact"`
+	IsPaid        bool   `json:"is_paid"`
+}
+
 // JustEntry represents a user registration in the just table
 type JustEntry struct {
 	ID             int64  `json:"id" db:"id"`

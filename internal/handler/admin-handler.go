@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"meily/internal/domain"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,8 +22,11 @@ func (h *Handler) AdminHandler(ctx context.Context, b *bot.Bot, update *models.U
 	adminId := h.cfg.AdminID
 	h.logger.Info("Admin handler", zap.Any("update", update))
 
-	state, ok := h.state[adminId]
-	if ok && state.State == stateBroadcast {
+	state, err := h.redisRepo.GetUserState(ctx, adminId)
+	if err != nil {
+		h.logger.Error("Failed to get admin state from Redis", zap.Error(err))
+	}
+	if state != nil && state.State == stateBroadcast {
 		h.SendMessage(ctx, b, update)
 		return
 	}
@@ -53,8 +57,11 @@ func (h *Handler) AdminHandler(ctx context.Context, b *bot.Bot, update *models.U
 
 	switch update.Message.Text {
 	case "/admin":
-		h.state[adminId] = &UserState{
+		newAdminState := &domain.UserState{
 			State: stateAdminPanel,
+		}
+		if err := h.redisRepo.SaveUserState(ctx, adminId, newAdminState); err != nil {
+			h.logger.Error("Failed to save admin state to Redis", zap.Error(err))
 		}
 		_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:      adminId,
@@ -88,7 +95,7 @@ func (h *Handler) AdminHandler(ctx context.Context, b *bot.Bot, update *models.U
 	case "❌ Жабу (Close)":
 		h.handleCloseAdmin(ctx, b)
 	default:
-		if ok && state.State == stateAdminPanel {
+		if state != nil && state.State == stateAdminPanel {
 			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID:      adminId,
 				Text:        "Белгісіз команда. Төмендегі батырмаларды пайдаланыңыз:",
@@ -107,7 +114,21 @@ func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Up
 	}
 
 	adminId := h.cfg.AdminID
-	userState, ok := h.state[adminId]
+	adminState, errRedis := h.redisRepo.GetUserState(ctx, adminId)
+	if errRedis != nil {
+		h.logger.Error("Failed to get admin state from Redis", zap.Error(errRedis))
+	}
+
+	if adminState == nil || adminState.State != stateBroadcast {
+		h.logger.Warn("Admin not in broadcast state",
+			zap.String("current_state", func() string {
+				if adminState == nil {
+					return "nil"
+				}
+				return adminState.State
+			}()))
+		return
+	}
 
 	switch update.Message.Text {
 	case "📢 Барлығына жіберу":
@@ -123,7 +144,9 @@ func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Up
 		h.startBroadcast(ctx, b, "just")
 		return
 	case "🔙 Артқа (Back)":
-		delete(h.state, adminId)
+		if err := h.redisRepo.DeleteUserState(ctx, adminId); err != nil {
+			h.logger.Error("Failed to delete admin state from Redis", zap.Error(err))
+		}
 		h.AdminHandler(ctx, b, &models.Update{
 			Message: &models.Message{
 				Text: "/admin",
@@ -135,12 +158,15 @@ func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Up
 		return
 	}
 
-	if !ok || userState.State != stateBroadcast {
-		h.logger.Warn("Admin not in broadcast state", zap.String("current_state", userState.State))
+	if adminState.State != stateBroadcast {
+		h.logger.Warn("Admin not in broadcast state", zap.String("current_state", adminState.State))
 		return
 	}
 
-	broadcastType := userState.BroadCastType
+	broadcastType := ""
+	if adminState != nil {
+		broadcastType = adminState.BroadCastType
+	}
 	h.logger.Info("Starting broadcast", zap.String("type", broadcastType))
 
 	msgType, fileId, caption := h.parseMessage(update.Message)
@@ -253,7 +279,9 @@ func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Up
 		zap.Int64("failed", finalFailed),
 		zap.Float64("success_rate", successRate))
 
-	delete(h.state, adminId)
+	if err := h.redisRepo.DeleteUserState(ctx, adminId); err != nil {
+		h.logger.Error("Failed to delete admin state from Redis", zap.Error(err))
+	}
 	time.Sleep(2 * time.Second)
 	h.AdminHandler(ctx, b, &models.Update{
 		Message: &models.Message{
@@ -270,8 +298,11 @@ func (h *Handler) handleBroadcastMenu(ctx context.Context, b *bot.Bot) {
 	// Get counts for each category
 	allCount, _ := h.repo.GetAllJustUserIDs(ctx)
 
-	h.state[adminId] = &UserState{
+	broadcastState := &domain.UserState{
 		State: stateBroadcast,
+	}
+	if err := h.redisRepo.SaveUserState(ctx, adminId, broadcastState); err != nil {
+		h.logger.Error("Failed to save broadcast state to Redis", zap.Error(err))
 	}
 
 	broadcastKeyboard := &models.ReplyKeyboardMarkup{
@@ -319,9 +350,12 @@ func (h *Handler) startBroadcast(ctx context.Context, b *bot.Bot, broadcastType 
 	adminId := h.cfg.AdminID
 
 	// Set admin to broadcast state
-	h.state[adminId] = &UserState{
+	broadCastState := &domain.UserState{
 		State:         stateBroadcast,
 		BroadCastType: broadcastType,
+	}
+	if err := h.redisRepo.SaveUserState(ctx, adminId, broadCastState); err != nil {
+		h.logger.Error("Failed to save broadcast state to Redis", zap.Error(err))
 	}
 
 	targetDescription := h.getBroadcastTypeName(broadcastType)
@@ -450,7 +484,9 @@ func (h *Handler) handleStatistics(ctx context.Context, b *bot.Bot) {
 }
 
 func (h *Handler) handleCloseAdmin(ctx context.Context, b *bot.Bot) {
-	delete(h.state, h.cfg.AdminID)
+	if err := h.redisRepo.DeleteUserState(ctx, h.cfg.AdminID); err != nil {
+		h.logger.Error("Failed to delete admin state from Redis", zap.Error(err))
+	}
 
 	// Remove keyboard
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{

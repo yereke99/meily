@@ -30,21 +30,13 @@ const (
 	stateBroadcast  string = "broadcast"
 )
 
-type UserState struct {
-	State         string
-	BroadCastType string
-	Count         int
-	Contact       string
-	IsPaid        bool
-}
-
 type Handler struct {
-	cfg    *config.Config
-	logger *zap.Logger
-	ctx    context.Context
-	repo   *repository.UserRepository
-	state  map[int64]*UserState
-	bot    *bot.Bot // Add bot instance to handler
+	cfg       *config.Config
+	logger    *zap.Logger
+	ctx       context.Context
+	repo      *repository.UserRepository
+	redisRepo *repository.RedisRepository
+	bot       *bot.Bot // Add bot instance to handler
 }
 
 // API Response structures
@@ -119,19 +111,52 @@ type ClientEntryWithGeo struct {
 	Longitude    float64 `json:"longitude"`
 }
 
-func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, repo *repository.UserRepository) *Handler {
+func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, repo *repository.UserRepository, redisRepo *repository.RedisRepository) *Handler {
 	return &Handler{
-		cfg:    cfg,
-		logger: zapLogger,
-		ctx:    ctx,
-		repo:   repo,
-		state:  make(map[int64]*UserState),
+		cfg:       cfg,
+		logger:    zapLogger,
+		ctx:       ctx,
+		repo:      repo,
+		redisRepo: redisRepo,
 	}
 }
 
 // SetBot sets the bot instance for the handler
 func (h *Handler) SetBot(b *bot.Bot) {
 	h.bot = b
+}
+
+// 7. ADD graceful degradation for Redis failures
+func (h *Handler) getOrCreateUserState(ctx context.Context, userID int64) *domain.UserState {
+	state, err := h.redisRepo.GetUserState(ctx, userID)
+	if err != nil {
+		h.logger.Error("Redis error, using fallback state",
+			zap.Error(err),
+			zap.Int64("user_id", userID))
+
+		// Return a safe default state
+		return &domain.UserState{
+			State:  stateStart,
+			Count:  0,
+			IsPaid: false,
+		}
+	}
+
+	if state == nil {
+		state = &domain.UserState{
+			State:  stateStart,
+			Count:  0,
+			IsPaid: false,
+		}
+
+		// Try to save, but don't fail if Redis is down
+		if err := h.redisRepo.SaveUserState(ctx, userID, state); err != nil {
+			h.logger.Warn("Failed to save state to Redis, continuing with in-memory state",
+				zap.Error(err))
+		}
+	}
+
+	return state
 }
 
 func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -170,24 +195,18 @@ func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models
 		case update.Message.Video != nil:
 			fileId = update.Message.Video.FileID
 		}
-		_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: h.cfg.AdminID,
-			Text:   fileId,
-		})
-		if err != nil {
-			h.logger.Error("error send fileId to admin", zap.Error(err))
+		if fileId != "" {
+			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID: h.cfg.AdminID,
+				Text:   fileId,
+			})
+			if err != nil {
+				h.logger.Error("error send fileId to admin", zap.Error(err))
+			}
 		}
 	}
 
-	userState, ok := h.state[userID]
-	if !ok {
-		userState = &UserState{
-			State:  stateStart,
-			Count:  0,
-			IsPaid: false,
-		}
-		h.state[userID] = userState
-	}
+	userState := h.getOrCreateUserState(ctx, userID)
 
 	if update.CallbackQuery != nil {
 		switch userState.State {
@@ -232,9 +251,7 @@ func (h *Handler) StartHandler(ctx context.Context, b *bot.Bot, update *models.U
 		return
 	}
 
-	fmt.Println("Start state", update.Message.From.ID)
-
-	promoText := "20 000 теңгеге косметикалық жиынтық сатып алыңыз және сыйлықтар ұтып алыңыз!"
+	promoText := "18 900 теңгеге косметикалық жиынтық сатып алыңыз және сыйлықтар ұтып алыңыз!"
 
 	inlineKbd := &models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
@@ -265,10 +282,13 @@ func (h *Handler) BuyCosmeticsCallbackHandler(ctx context.Context, b *bot.Bot, u
 
 	userID := update.CallbackQuery.From.ID
 
-	h.state[userID] = &UserState{
+	newState := &domain.UserState{
 		State:  stateCount,
 		Count:  0,
 		IsPaid: false,
+	}
+	if err := h.redisRepo.SaveUserState(ctx, userID, newState); err != nil {
+		h.logger.Error("Failed to save user state to Redis", zap.Error(err))
 	}
 
 	rows := make([][]models.InlineKeyboardButton, 6)
@@ -332,10 +352,13 @@ func (h *Handler) CountHandler(ctx context.Context, b *bot.Bot, update *models.U
 	totalSum = userCount * h.cfg.Cost
 
 	userID := update.CallbackQuery.From.ID
-	h.state[userID] = &UserState{
+	newState := &domain.UserState{
 		State:  statePaid,
 		Count:  userCount,
 		IsPaid: false,
+	}
+	if err := h.redisRepo.SaveUserState(ctx, userID, newState); err != nil {
+		h.logger.Warn("Failed to save user state in count handler", zap.Error(err))
 	}
 
 	inlineKbd := &models.InlineKeyboardMarkup{
@@ -413,11 +436,16 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		return
 	}
 
-	state, ok := h.state[userID]
-	if ok {
+	state, err := h.redisRepo.GetUserState(ctx, userID)
+	if err != nil {
+		h.logger.Error("Failed to get user state from Redis", zap.Error(err))
+	}
+	if state != nil {
 		state.IsPaid = true
 		state.State = stateContact
-		h.state[userID] = state
+		if err := h.redisRepo.SaveUserState(ctx, userID, state); err != nil {
+			h.logger.Error("Failed to save user state to Redis", zap.Error(err))
+		}
 	}
 
 	kb := models.ReplyKeyboardMarkup{
@@ -475,12 +503,50 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 		return
 	}
 
-	state, ok := h.state[userId]
-	if ok {
-		state.Contact = update.Message.Contact.PhoneNumber
-		h.state[userId] = state
+	state, err := h.redisRepo.GetUserState(ctx, userId)
+	if err != nil {
+		h.logger.Error("Failed to get user state from Redis", zap.Error(err))
+		state = &domain.UserState{
+			State:  stateContact,
+			Count:  1,
+			IsPaid: true,
+		}
 	}
-	userData := fmt.Sprintf("UserID: %d, State: %s, Count: %d, IsPaid: %t, Contact: %s", update.Message.From.ID, state.State, state.Count, state.IsPaid, state.Contact)
+
+	if state != nil {
+		state.Contact = update.Message.Contact.PhoneNumber
+		if err := h.redisRepo.SaveUserState(ctx, userId, state); err != nil {
+			h.logger.Error("Failed to save user state to Redis", zap.Error(err))
+		}
+	}
+
+	// FIX: Use state data safely with nil checks
+	userData := fmt.Sprintf("UserID: %d, State: %s, Count: %d, IsPaid: %t, Contact: %s",
+		update.Message.From.ID,
+		func() string {
+			if state != nil {
+				return state.State
+			}
+			return "unknown"
+		}(),
+		func() int {
+			if state != nil {
+				return state.Count
+			}
+			return 0
+		}(),
+		func() bool {
+			if state != nil {
+				return state.IsPaid
+			}
+			return false
+		}(),
+		func() string {
+			if state != nil {
+				return state.Contact
+			}
+			return ""
+		}())
 	h.logger.Info(userData)
 
 	// FIXED: Use direct Mini App URL without bot username
@@ -516,7 +582,7 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 		h.logger.Warn("Failed to insert client", zap.Error(err))
 	}
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
 		Text: "✅ Контактіңіз сәтті алынды! 😊\n" +
 			"Косметикалық жинақты қай мекен-жайға жеткізу керек екенін көрсетіңіз. 🚚\n" +
@@ -527,7 +593,9 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 		h.logger.Warn("Failed to send confirmation message", zap.Error(err))
 	}
 
-	delete(h.state, userId)
+	if err := h.redisRepo.DeleteUserState(ctx, userId); err != nil {
+		h.logger.Error("Failed to delete user state from Redis", zap.Error(err))
+	}
 }
 
 // API Handlers

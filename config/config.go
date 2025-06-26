@@ -30,7 +30,7 @@ func NewConfig() (*Config, error) {
 		AdminID:         800703982,
 		StartPhotoId:    "AgACAgIAAxkBAANSaFP5emhGuJ5qTUamzTYon-yyPv4AAszxMRuxzqBKW2jULQVc0e4BAAMCAAN5AAM2BA",
 		StartVideoId:    "",
-		Cost:            20000,
+		Cost:            18900,
 		BotUsername:     "meilly_cosmetics_bot",
 	}
 

@@ -42,8 +42,16 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	redisClient, err := database.ConnectRedis(ctx, zapLogger)
+	if err != nil {
+		zapLogger.Error("error connecting to Redis", zap.Error(err))
+		return
+	}
+	defer database.CloseRedis(redisClient, zapLogger)
+
 	userRepo := repository.NewUserRepository(db)
-	handl := handler.NewHandler(cfg, zapLogger, ctx, userRepo)
+	redisRepo := repository.NewRedisRepository(redisClient)
+	handl := handler.NewHandler(cfg, zapLogger, ctx, userRepo, redisRepo)
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(handl.DefaultHandler),
