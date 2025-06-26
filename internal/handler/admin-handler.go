@@ -99,7 +99,6 @@ func (h *Handler) AdminHandler(ctx context.Context, b *bot.Bot, update *models.U
 			}
 		}
 	}
-
 }
 
 func (h *Handler) SendMessage(ctx context.Context, b *bot.Bot, update *models.Update) {

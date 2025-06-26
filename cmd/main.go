@@ -51,7 +51,14 @@ func main() {
 		bot.WithCallbackQueryDataHandler("count_", bot.MatchTypePrefix, handl.CountHandler),
 
 		bot.WithMessageTextHandler("/admin", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("💰 Ақша (Money)", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("👥 Тіркелгендер (Just Clicked)", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("🛍 Клиенттер (Clients)", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("🎲 Лото (Loto)", bot.MatchTypeExact, handl.AdminHandler),
 		bot.WithMessageTextHandler("📢 Хабарлама (Messages)", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("🎁 Сыйлық (Gift)", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("📊 Статистика (Statistics)", bot.MatchTypeExact, handl.AdminHandler),
+		bot.WithMessageTextHandler("❌ Жабу (Close)", bot.MatchTypeExact, handl.AdminHandler),
 	}
 
 	b, err := bot.New(cfg.Token, opts...)

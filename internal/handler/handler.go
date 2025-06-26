@@ -199,6 +199,8 @@ func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models
 			h.PaidHandler(ctx, b, update)
 		case stateContact:
 			h.ShareContactCallbackHandler(ctx, b, update)
+		case stateAdminPanel:
+			h.AdminHandler(ctx, b, update)
 		case stateBroadcast:
 			h.SendMessage(ctx, b, update)
 		default:
@@ -216,6 +218,8 @@ func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models
 		h.PaidHandler(ctx, b, update)
 	case stateContact:
 		h.ShareContactCallbackHandler(ctx, b, update)
+	case stateAdminPanel:
+		h.AdminHandler(ctx, b, update)
 	case stateBroadcast:
 		h.SendMessage(ctx, b, update)
 	default:
