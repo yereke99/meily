@@ -62,539 +62,6 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//                                 EXISTING METHODS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// GetAllJustUserIDs returns all user IDs from just table
-func (r *UserRepository) GetAllJustUserIDs(ctx context.Context) ([]int64, error) {
-	const q = `SELECT id_user FROM just ORDER BY dataRegistred DESC;`
-	rows, err := r.db.QueryContext(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var userIDs []int64
-	for rows.Next() {
-		var userID int64
-		if err := rows.Scan(&userID); err != nil {
-			continue
-		}
-		userIDs = append(userIDs, userID)
-	}
-	return userIDs, nil
-}
-
-// InsertJust вставляет запись в таблицу just.
-func (r *UserRepository) InsertJust(ctx context.Context, e domain.JustEntry) error {
-	const q = `
-		INSERT INTO just (id_user, userName, dataRegistred)
-		VALUES (?, ?, ?);
-	`
-	_, err := r.db.ExecContext(ctx, q, e.UserID, e.UserName, e.DateRegistered)
-	return err
-}
-
-// ExistsJust проверяет, есть ли запись в just по id_user.
-func (r *UserRepository) ExistsJust(ctx context.Context, userID int64) (bool, error) {
-	const q = `SELECT COUNT(1) FROM just WHERE id_user = ?;`
-	var cnt int
-	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
-		return false, err
-	}
-	return cnt > 0, nil
-}
-
-// InsertClient вставляет запись в таблицу client.
-func (r *UserRepository) InsertClient(ctx context.Context, e domain.ClientEntry) error {
-	const q = `
-		INSERT INTO client (id_user, userName, fio, contact, address, dateRegister, dataPay, checks)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-	`
-	_, err := r.db.ExecContext(ctx, q,
-		e.UserID, e.UserName, e.Fio, e.Contact,
-		e.Address, e.DateRegister, e.DatePay, e.Checks,
-	)
-	return err
-}
-
-// ExistsClient проверяет, есть ли запись в client по id_user.
-func (r *UserRepository) ExistsClient(ctx context.Context, userID int64) (bool, error) {
-	const q = `SELECT COUNT(1) FROM client WHERE id_user = ?;`
-	var cnt int
-	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
-		return false, err
-	}
-	return cnt > 0, nil
-}
-
-// IsClientUnique возвращает true, если в client нет записи с данным id_user.
-func (r *UserRepository) IsClientUnique(ctx context.Context, userID int64) (bool, error) {
-	const q = `
-		SELECT COUNT(1)
-		FROM client
-		WHERE id_user = ?;
-	`
-	var cnt int
-	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
-		return false, err
-	}
-	// уникальный — значит, записей нет
-	return cnt == 0, nil
-}
-
-// IsClientPaid проверяет, оплачен ли клиент (существует ли запись и checks = true)
-func (r *UserRepository) IsClientPaid(ctx context.Context, userID int64) (bool, error) {
-	const q = `
-		SELECT checks
-		FROM client
-		WHERE id_user = ?;
-	`
-	var checks bool
-	err := r.db.QueryRowContext(ctx, q, userID).Scan(&checks)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil // No client record found
-		}
-		return false, err
-	}
-	return checks, nil
-}
-
-// GetClientByUserID получает данные клиента по user ID
-func (r *UserRepository) GetClientByUserID(ctx context.Context, userID int64) (*domain.ClientEntry, error) {
-	const q = `
-		SELECT id_user, userName, fio, contact, address, dateRegister, dataPay, checks
-		FROM client
-		WHERE id_user = ?;
-	`
-	var client domain.ClientEntry
-	err := r.db.QueryRowContext(ctx, q, userID).Scan(
-		&client.UserID, &client.UserName,
-		&client.Fio, &client.Contact, &client.Address,
-		&client.DateRegister, &client.DatePay, &client.Checks,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &client, nil
-}
-
-// UpdateClientDeliveryData обновляет данные доставки клиента
-func (r *UserRepository) UpdateClientDeliveryData(ctx context.Context, userID int64, fio, address string, latitude, longitude float64) error {
-	const q = `
-		UPDATE client 
-		SET fio = ?, address = ?, checks = true
-		WHERE id_user = ?;
-	`
-	_, err := r.db.ExecContext(ctx, q, fio, address, userID)
-	if err != nil {
-		return err
-	}
-
-	// Also insert/update geo data
-	const geoQ = `
-		INSERT OR REPLACE INTO geo (id_user, location, dataReg)
-		VALUES (?, ?, ?);
-	`
-	location := fmt.Sprintf("%.6f,%.6f", latitude, longitude)
-	_, err = r.db.ExecContext(ctx, geoQ, userID, location, time.Now().Format("2006-01-02 15:04:05"))
-	return err
-}
-
-// GetAllClientsWithDeliveryData получает всех клиентов с данными доставки
-func (r *UserRepository) GetAllClientsWithDeliveryData(ctx context.Context) ([]domain.ClientEntry, error) {
-	const q = `
-		SELECT id_user, userName, fio, contact, address, dateRegister, dataPay, checks
-		FROM client
-		WHERE checks = true
-		ORDER BY dataPay DESC;
-	`
-	rows, err := r.db.QueryContext(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var clients []domain.ClientEntry
-	for rows.Next() {
-		var client domain.ClientEntry
-		err := rows.Scan(
-			&client.UserID, &client.UserName,
-			&client.Fio, &client.Contact, &client.Address,
-			&client.DateRegister, &client.DatePay, &client.Checks,
-		)
-		if err != nil {
-			return nil, err
-		}
-		clients = append(clients, client)
-	}
-	return clients, rows.Err()
-}
-
-// InsertLoto вставляет запись в таблицу loto.
-func (r *UserRepository) InsertLoto(ctx context.Context, e domain.LotoEntry) error {
-	const q = `
-		INSERT INTO loto (id_user, id_loto, qr, who_paid, receipt, fio, contact, address, dataPay)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-	`
-	_, err := r.db.ExecContext(ctx, q,
-		e.UserID, e.LotoID, e.QR, e.WhoPaid,
-		e.Receipt, e.Fio, e.Contact, e.Address, e.DatePay,
-	)
-	return err
-}
-
-// ExistsLoto проверяет, есть ли запись в loto по id_user.
-func (r *UserRepository) ExistsLoto(ctx context.Context, userID int64) (bool, error) {
-	const q = `SELECT COUNT(1) FROM loto WHERE id_user = ?;`
-	var cnt int
-	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
-		return false, err
-	}
-	return cnt > 0, nil
-}
-
-// IsLotoPaid возвращает true, если для данного id_user и id_loto есть непустое who_paid.
-func (r *UserRepository) IsLotoPaid(ctx context.Context, userID int64, lotoID int) (bool, error) {
-	const q = `
-		SELECT COUNT(1) > 0
-		FROM loto
-		WHERE id_user = ? AND id_loto = ? AND who_paid != '';
-	`
-	var paid bool
-	err := r.db.QueryRowContext(ctx, q, userID, lotoID).Scan(&paid)
-	return paid, err
-}
-
-// InsertGeo вставляет запись в таблицу geo.
-func (r *UserRepository) InsertGeo(ctx context.Context, e domain.GeoEntry) error {
-	const q = `
-		INSERT INTO geo (id_user, location, dataReg)
-		VALUES (?, ?, ?);
-	`
-	_, err := r.db.ExecContext(ctx, q, e.UserID, e.Location, e.DataReg)
-	return err
-}
-
-// ExistsGeo проверяет, есть ли запись в geo по id_user.
-func (r *UserRepository) ExistsGeo(ctx context.Context, userID int64) (bool, error) {
-	const q = `SELECT COUNT(1) FROM geo WHERE id_user = ?;`
-	var cnt int
-	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
-		return false, err
-	}
-	return cnt > 0, nil
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//                            ADMIN DASHBOARD METHODS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// GetTotalUsers возвращает общее количество пользователей
-func (r *UserRepository) GetTotalUsers(ctx context.Context) int {
-	const q = `SELECT COUNT(*) FROM just;`
-	var count int
-	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
-		return 0
-	}
-	return count
-}
-
-// GetTotalClients возвращает общее количество клиентов
-func (r *UserRepository) GetTotalClients(ctx context.Context) int {
-	const q = `SELECT COUNT(*) FROM client;`
-	var count int
-	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
-		return 0
-	}
-	return count
-}
-
-// GetTotalLotto возвращает общее количество участников лотереи
-func (r *UserRepository) GetTotalLotto(ctx context.Context) int {
-	const q = `SELECT COUNT(*) FROM loto;`
-	var count int
-	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
-		return 0
-	}
-	return count
-}
-
-// GetTotalGeo возвращает общее количество записей геолокации
-func (r *UserRepository) GetTotalGeo(ctx context.Context) int {
-	const q = `SELECT COUNT(*) FROM geo;`
-	var count int
-	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
-		return 0
-	}
-	return count
-}
-
-// GetRecentJustEntries возвращает последние записи из таблицы just
-func (r *UserRepository) GetRecentJustEntries(ctx context.Context, limit int) ([]domain.JustEntry, error) {
-	const q = `
-		SELECT id_user, userName, dataRegistred
-		FROM just
-		ORDER BY dataRegistred DESC
-		LIMIT ?;
-	`
-	rows, err := r.db.QueryContext(ctx, q, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []domain.JustEntry
-	for rows.Next() {
-		var entry domain.JustEntry
-		err := rows.Scan(&entry.UserID, &entry.UserName, &entry.DateRegistered)
-		if err != nil {
-			continue // Skip invalid rows
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, nil
-}
-
-// GetRecentLotoEntries возвращает последние записи из таблицы loto
-func (r *UserRepository) GetRecentLotoEntries(ctx context.Context, limit int) ([]domain.LotoEntry, error) {
-	const q = `
-		SELECT id_user, id_loto, qr, who_paid, receipt, fio, contact, address, dataPay
-		FROM loto
-		ORDER BY dataPay DESC
-		LIMIT ?;
-	`
-	rows, err := r.db.QueryContext(ctx, q, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []domain.LotoEntry
-	for rows.Next() {
-		var entry domain.LotoEntry
-		if err := rows.Scan(&entry.UserID, &entry.LotoID, &entry.QR, &entry.WhoPaid,
-			&entry.Receipt, &entry.Fio, &entry.Contact, &entry.Address, &entry.DatePay); err != nil {
-			continue
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, nil
-}
-
-// GetRecentGeoEntries возвращает последние записи из таблицы geo
-func (r *UserRepository) GetRecentGeoEntries(ctx context.Context, limit int) ([]domain.GeoEntry, error) {
-	const q = `
-		SELECT id_user, location, dataReg
-		FROM geo
-		ORDER BY dataReg DESC
-		LIMIT ?;
-	`
-	rows, err := r.db.QueryContext(ctx, q, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []domain.GeoEntry
-	for rows.Next() {
-		var entry domain.GeoEntry
-		if err := rows.Scan(&entry.UserID, &entry.Location, &entry.DataReg); err != nil {
-			continue
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, nil
-}
-
-// GetClientsWithGeo возвращает клиентов с геолокацией для админ панели
-func (r *UserRepository) GetClientsWithGeo(ctx context.Context) ([]AdminClientEntry, error) {
-	const q = `
-		SELECT 
-			c.id_user, 
-			c.userName, 
-			COALESCE(c.fio, '') as fio,
-			COALESCE(c.contact, '') as contact, 
-			COALESCE(c.address, '') as address,
-			COALESCE(c.dateRegister, '') as dateRegister,
-			COALESCE(c.dataPay, '') as dataPay,
-			COALESCE(c.checks, 0) as checks,
-			g.location
-		FROM client c
-		LEFT JOIN geo g ON c.id_user = g.id_user
-		ORDER BY c.dataPay DESC;
-	`
-
-	rows, err := r.db.QueryContext(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var clients []AdminClientEntry
-	for rows.Next() {
-		var client AdminClientEntry
-		var geoLocation sql.NullString
-
-		if err := rows.Scan(
-			&client.UserID,
-			&client.UserName,
-			&client.Fio,
-			&client.Contact,
-			&client.Address,
-			&client.DateRegister,
-			&client.DatePay,
-			&client.Checks,
-			&geoLocation,
-		); err != nil {
-			continue
-		}
-
-		// Parse geolocation if available
-		client.HasGeo = false
-		if geoLocation.Valid && geoLocation.String != "" {
-			lat, lon := parseCoordinates(geoLocation.String)
-			if lat != nil && lon != nil {
-				client.HasGeo = true
-				client.Latitude = lat
-				client.Longitude = lon
-			}
-		}
-
-		clients = append(clients, client)
-	}
-
-	return clients, nil
-}
-
-// parseCoordinates парсит координаты из строки местоположения
-func parseCoordinates(location string) (*float64, *float64) {
-	// Try different coordinate formats
-	// Format 1: "lat,lon"
-	if strings.Contains(location, ",") {
-		parts := strings.Split(location, ",")
-		if len(parts) >= 2 {
-			lat, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
-			lon, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
-			if err1 == nil && err2 == nil {
-				// Validate coordinate ranges
-				if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
-					return &lat, &lon
-				}
-			}
-		}
-	}
-
-	// Format 2: "lat:43.2,lon:76.8"
-	if strings.Contains(location, "lat:") && strings.Contains(location, "lon:") {
-		parts := strings.Split(location, ",")
-		if len(parts) >= 2 {
-			latStr := strings.TrimPrefix(strings.TrimSpace(parts[0]), "lat:")
-			lonStr := strings.TrimPrefix(strings.TrimSpace(parts[1]), "lon:")
-
-			lat, err1 := strconv.ParseFloat(latStr, 64)
-			lon, err2 := strconv.ParseFloat(lonStr, 64)
-			if err1 == nil && err2 == nil {
-				if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
-					return &lat, &lon
-				}
-			}
-		}
-	}
-
-	// Format 3: JSON-like format {"lat": 43.2, "lon": 76.8}
-	if strings.Contains(location, "{") && strings.Contains(location, "}") {
-		var coords map[string]float64
-		if err := json.Unmarshal([]byte(location), &coords); err == nil {
-			if lat, ok1 := coords["lat"]; ok1 {
-				if lon, ok2 := coords["lon"]; ok2 {
-					if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
-						return &lat, &lon
-					}
-				}
-			}
-			// Also try latitude/longitude keys
-			if lat, ok1 := coords["latitude"]; ok1 {
-				if lon, ok2 := coords["longitude"]; ok2 {
-					if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
-						return &lat, &lon
-					}
-				}
-			}
-		}
-	}
-
-	return nil, nil
-}
-
-// GetLottoStats возвращает статистику лотереи с правильной обработкой NULL значений
-func (r *UserRepository) GetLottoStats(ctx context.Context) *LottoStats {
-	const q = `
-		SELECT 
-			COUNT(CASE WHEN who_paid IS NOT NULL AND who_paid != '' THEN 1 END) as paid,
-			COUNT(CASE WHEN who_paid IS NULL OR who_paid = '' THEN 1 END) as unpaid
-		FROM loto;
-	`
-
-	var stats LottoStats
-	if err := r.db.QueryRowContext(ctx, q).Scan(&stats.Paid, &stats.Unpaid); err != nil {
-		return &LottoStats{Paid: 0, Unpaid: 0}
-	}
-
-	return &stats
-}
-
-// GetGeoStats возвращает географическую статистику
-func (r *UserRepository) GetGeoStats(ctx context.Context) *GeoStats {
-	const q = `
-		SELECT location, COUNT(*) as count
-		FROM geo
-		WHERE location IS NOT NULL AND location != ''
-		GROUP BY location;
-	`
-
-	rows, err := r.db.QueryContext(ctx, q)
-	if err != nil {
-		return &GeoStats{Almaty: 0, Nursultan: 0, Shymkent: 0, Karaganda: 0, Others: 0}
-	}
-	defer rows.Close()
-
-	var stats GeoStats
-	for rows.Next() {
-		var location string
-		var count int
-		if err := rows.Scan(&location, &count); err != nil {
-			continue
-		}
-
-		// Parse coordinates and categorize by city
-		lat, lon := parseCoordinates(location)
-		if lat != nil && lon != nil {
-			// Categorize by approximate coordinates for Kazakhstan cities
-			if *lat >= 43.0 && *lat <= 43.5 && *lon >= 76.5 && *lon <= 77.2 {
-				stats.Almaty += count // Almaty region
-			} else if *lat >= 51.0 && *lat <= 51.5 && *lon >= 71.0 && *lon <= 71.8 {
-				stats.Nursultan += count // Nur-Sultan/Astana region
-			} else if *lat >= 42.0 && *lat <= 42.5 && *lon >= 69.0 && *lon <= 70.0 {
-				stats.Shymkent += count // Shymkent region
-			} else if *lat >= 49.5 && *lat <= 50.0 && *lon >= 72.5 && *lon <= 73.5 {
-				stats.Karaganda += count // Karaganda region
-			} else {
-				stats.Others += count
-			}
-		} else {
-			stats.Others += count
-		}
-	}
-
-	return &stats
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 //                            ENHANCED GEO ANALYTICS METHODS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1104,3 +571,590 @@ func (r *UserRepository) GetLatestGeoLocation(ctx context.Context, userID int64)
 	lat, lon := parseCoordinates(location)
 	return lat, lon, nil
 }
+
+//                                 EXISTING METHODS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GetAllJustUserIDs returns all user IDs from just table
+func (r *UserRepository) GetAllJustUserIDs(ctx context.Context) ([]int64, error) {
+	const q = `SELECT id_user FROM just ORDER BY dataRegistred DESC;`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userIDs []int64
+	for rows.Next() {
+		var userID int64
+		if err := rows.Scan(&userID); err != nil {
+			continue
+		}
+		userIDs = append(userIDs, userID)
+	}
+	return userIDs, nil
+}
+
+// InsertJust вставляет запись в таблицу just.
+func (r *UserRepository) InsertJust(ctx context.Context, e domain.JustEntry) error {
+	const q = `
+		INSERT INTO just (id_user, userName, dataRegistred)
+		VALUES (?, ?, ?);
+	`
+	_, err := r.db.ExecContext(ctx, q, e.UserID, e.UserName, e.DateRegistered)
+	return err
+}
+
+// ExistsJust проверяет, есть ли запись в just по id_user.
+func (r *UserRepository) ExistsJust(ctx context.Context, userID int64) (bool, error) {
+	const q = `SELECT COUNT(1) FROM just WHERE id_user = ?;`
+	var cnt int
+	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
+}
+
+// InsertClient вставляет запись в таблицу client.
+func (r *UserRepository) InsertClient(ctx context.Context, e domain.ClientEntry) error {
+	const q = `
+		INSERT INTO client (id_user, userName, fio, contact, address, dateRegister, dataPay, checks)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+	`
+	_, err := r.db.ExecContext(ctx, q,
+		e.UserID, e.UserName, e.Fio, e.Contact,
+		e.Address, e.DateRegister, e.DatePay, e.Checks,
+	)
+	return err
+}
+
+// ExistsClient проверяет, есть ли запись в client по id_user.
+func (r *UserRepository) ExistsClient(ctx context.Context, userID int64) (bool, error) {
+	const q = `SELECT COUNT(1) FROM client WHERE id_user = ?;`
+	var cnt int
+	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
+}
+
+// IsClientUnique возвращает true, если в client нет записи с данным id_user.
+func (r *UserRepository) IsClientUnique(ctx context.Context, userID int64) (bool, error) {
+	const q = `
+		SELECT COUNT(1)
+		FROM client
+		WHERE id_user = ?;
+	`
+	var cnt int
+	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
+		return false, err
+	}
+	// уникальный — значит, записей нет
+	return cnt == 0, nil
+}
+
+// IsClientPaid проверяет, оплачен ли клиент (существует ли запись и checks = true)
+func (r *UserRepository) IsClientPaid(ctx context.Context, userID int64) (bool, error) {
+	const q = `
+		SELECT checks
+		FROM client
+		WHERE id_user = ?;
+	`
+	var checks bool
+	err := r.db.QueryRowContext(ctx, q, userID).Scan(&checks)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil // No client record found
+		}
+		return false, err
+	}
+	return checks, nil
+}
+
+// GetClientByUserID получает данные клиента по user ID
+func (r *UserRepository) GetClientByUserID(ctx context.Context, userID int64) (*domain.ClientEntry, error) {
+	const q = `
+		SELECT id_user, userName, fio, contact, address, dateRegister, dataPay, checks
+		FROM client
+		WHERE id_user = ?;
+	`
+	var client domain.ClientEntry
+	err := r.db.QueryRowContext(ctx, q, userID).Scan(
+		&client.UserID, &client.UserName,
+		&client.Fio, &client.Contact, &client.Address,
+		&client.DateRegister, &client.DatePay, &client.Checks,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &client, nil
+}
+
+// UpdateClientDeliveryData обновляет данные доставки клиента
+func (r *UserRepository) UpdateClientDeliveryData(ctx context.Context, userID int64, fio, address string, latitude, longitude float64) error {
+	const q = `
+		UPDATE client 
+		SET fio = ?, address = ?, checks = true
+		WHERE id_user = ?;
+	`
+	_, err := r.db.ExecContext(ctx, q, fio, address, userID)
+	if err != nil {
+		return err
+	}
+
+	// Also insert/update geo data
+	const geoQ = `
+		INSERT OR REPLACE INTO geo (id_user, location, dataReg)
+		VALUES (?, ?, ?);
+	`
+	location := fmt.Sprintf("%.6f,%.6f", latitude, longitude)
+	_, err = r.db.ExecContext(ctx, geoQ, userID, location, time.Now().Format("2006-01-02 15:04:05"))
+	return err
+}
+
+// GetAllClientsWithDeliveryData получает всех клиентов с данными доставки
+func (r *UserRepository) GetAllClientsWithDeliveryData(ctx context.Context) ([]domain.ClientEntry, error) {
+	const q = `
+		SELECT id_user, userName, fio, contact, address, dateRegister, dataPay, checks
+		FROM client
+		WHERE checks = true
+		ORDER BY dataPay DESC;
+	`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var clients []domain.ClientEntry
+	for rows.Next() {
+		var client domain.ClientEntry
+		err := rows.Scan(
+			&client.UserID, &client.UserName,
+			&client.Fio, &client.Contact, &client.Address,
+			&client.DateRegister, &client.DatePay, &client.Checks,
+		)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, client)
+	}
+	return clients, rows.Err()
+}
+
+// InsertLoto вставляет запись в таблицу loto.
+func (r *UserRepository) InsertLoto(ctx context.Context, e domain.LotoEntry) error {
+	const q = `
+		INSERT INTO loto (id_user, id_loto, qr, who_paid, receipt, fio, contact, address, dataPay)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+	`
+	_, err := r.db.ExecContext(ctx, q,
+		e.UserID, e.LotoID, e.QR, e.WhoPaid,
+		e.Receipt, e.Fio, e.Contact, e.Address, e.DatePay,
+	)
+	return err
+}
+
+// ExistsLoto проверяет, есть ли запись в loto по id_user.
+func (r *UserRepository) ExistsLoto(ctx context.Context, userID int64) (bool, error) {
+	const q = `SELECT COUNT(1) FROM loto WHERE id_user = ?;`
+	var cnt int
+	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
+}
+
+// IsLotoPaid возвращает true, если для данного id_user и id_loto есть непустое who_paid.
+func (r *UserRepository) IsLotoPaid(ctx context.Context, userID int64, lotoID int) (bool, error) {
+	const q = `
+		SELECT COUNT(1) > 0
+		FROM loto
+		WHERE id_user = ? AND id_loto = ? AND who_paid != '';
+	`
+	var paid bool
+	err := r.db.QueryRowContext(ctx, q, userID, lotoID).Scan(&paid)
+	return paid, err
+}
+
+// InsertGeo вставляет запись в таблицу geo.
+func (r *UserRepository) InsertGeo(ctx context.Context, e domain.GeoEntry) error {
+	const q = `
+		INSERT INTO geo (id_user, location, dataReg)
+		VALUES (?, ?, ?);
+	`
+	_, err := r.db.ExecContext(ctx, q, e.UserID, e.Location, e.DataReg)
+	return err
+}
+
+// ExistsGeo проверяет, есть ли запись в geo по id_user.
+func (r *UserRepository) ExistsGeo(ctx context.Context, userID int64) (bool, error) {
+	const q = `SELECT COUNT(1) FROM geo WHERE id_user = ?;`
+	var cnt int
+	if err := r.db.QueryRowContext(ctx, q, userID).Scan(&cnt); err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                            ADMIN DASHBOARD METHODS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GetTotalUsers возвращает общее количество пользователей
+func (r *UserRepository) GetTotalUsers(ctx context.Context) int {
+	const q = `SELECT COUNT(*) FROM just;`
+	var count int
+	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
+		return 0
+	}
+	return count
+}
+
+// GetTotalClients возвращает общее количество клиентов
+func (r *UserRepository) GetTotalClients(ctx context.Context) int {
+	const q = `SELECT COUNT(*) FROM client;`
+	var count int
+	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
+		return 0
+	}
+	return count
+}
+
+// GetTotalLotto возвращает общее количество участников лотереи
+func (r *UserRepository) GetTotalLotto(ctx context.Context) int {
+	const q = `SELECT COUNT(*) FROM loto;`
+	var count int
+	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
+		return 0
+	}
+	return count
+}
+
+// GetTotalGeo возвращает общее количество записей геолокации
+func (r *UserRepository) GetTotalGeo(ctx context.Context) int {
+	const q = `SELECT COUNT(*) FROM geo;`
+	var count int
+	if err := r.db.QueryRowContext(ctx, q).Scan(&count); err != nil {
+		return 0
+	}
+	return count
+}
+
+// GetRecentJustEntries возвращает последние записи из таблицы just
+func (r *UserRepository) GetRecentJustEntries(ctx context.Context, limit int) ([]domain.JustEntry, error) {
+	const q = `
+		SELECT id_user, userName, dataRegistred
+		FROM just
+		ORDER BY dataRegistred DESC
+		LIMIT ?;
+	`
+	rows, err := r.db.QueryContext(ctx, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []domain.JustEntry
+	for rows.Next() {
+		var entry domain.JustEntry
+		err := rows.Scan(&entry.UserID, &entry.UserName, &entry.DateRegistered)
+		if err != nil {
+			continue // Skip invalid rows
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// GetRecentLotoEntries возвращает последние записи из таблицы loto
+func (r *UserRepository) GetRecentLotoEntries(ctx context.Context, limit int) ([]domain.LotoEntry, error) {
+	const q = `
+		SELECT id_user, id_loto, qr, who_paid, receipt, fio, contact, address, dataPay
+		FROM loto
+		ORDER BY dataPay DESC
+		LIMIT ?;
+	`
+	rows, err := r.db.QueryContext(ctx, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []domain.LotoEntry
+	for rows.Next() {
+		var entry domain.LotoEntry
+		if err := rows.Scan(&entry.UserID, &entry.LotoID, &entry.QR, &entry.WhoPaid,
+			&entry.Receipt, &entry.Fio, &entry.Contact, &entry.Address, &entry.DatePay); err != nil {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// GetRecentGeoEntries возвращает последние записи из таблицы geo
+func (r *UserRepository) GetRecentGeoEntries(ctx context.Context, limit int) ([]domain.GeoEntry, error) {
+	const q = `
+		SELECT id_user, location, dataReg
+		FROM geo
+		ORDER BY dataReg DESC
+		LIMIT ?;
+	`
+	rows, err := r.db.QueryContext(ctx, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []domain.GeoEntry
+	for rows.Next() {
+		var entry domain.GeoEntry
+		if err := rows.Scan(&entry.UserID, &entry.Location, &entry.DataReg); err != nil {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// NEW: GetAllGeoEntries возвращает ВСЕ записи из таблицы geo для карты
+func (r *UserRepository) GetAllGeoEntries(ctx context.Context) ([]domain.GeoEntry, error) {
+	const q = `
+		SELECT id_user, location, dataReg
+		FROM geo
+		WHERE location IS NOT NULL AND location != ''
+		ORDER BY dataReg DESC;
+	`
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []domain.GeoEntry
+	for rows.Next() {
+		var entry domain.GeoEntry
+		if err := rows.Scan(&entry.UserID, &entry.Location, &entry.DataReg); err != nil {
+			continue
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+// GetClientsWithGeo возвращает клиентов с геолокацией для админ панели
+func (r *UserRepository) GetClientsWithGeo(ctx context.Context) ([]AdminClientEntry, error) {
+	const q = `
+		SELECT 
+			c.id_user, 
+			c.userName, 
+			COALESCE(c.fio, '') as fio,
+			COALESCE(c.contact, '') as contact, 
+			COALESCE(c.address, '') as address,
+			COALESCE(c.dateRegister, '') as dateRegister,
+			COALESCE(c.dataPay, '') as dataPay,
+			COALESCE(c.checks, 0) as checks,
+			g.location
+		FROM client c
+		LEFT JOIN geo g ON c.id_user = g.id_user
+		ORDER BY c.dataPay DESC;
+	`
+
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var clients []AdminClientEntry
+	for rows.Next() {
+		var client AdminClientEntry
+		var geoLocation sql.NullString
+
+		if err := rows.Scan(
+			&client.UserID,
+			&client.UserName,
+			&client.Fio,
+			&client.Contact,
+			&client.Address,
+			&client.DateRegister,
+			&client.DatePay,
+			&client.Checks,
+			&geoLocation,
+		); err != nil {
+			continue
+		}
+
+		// Parse geolocation if available
+		client.HasGeo = false
+		if geoLocation.Valid && geoLocation.String != "" {
+			lat, lon := parseCoordinates(geoLocation.String)
+			if lat != nil && lon != nil {
+				client.HasGeo = true
+				client.Latitude = lat
+				client.Longitude = lon
+			}
+		}
+
+		clients = append(clients, client)
+	}
+
+	return clients, nil
+}
+
+// parseCoordinates парсит координаты из строки местоположения
+func parseCoordinates(location string) (*float64, *float64) {
+	// Try different coordinate formats
+	// Format 1: "lat,lon"
+	if strings.Contains(location, ",") {
+		parts := strings.Split(location, ",")
+		if len(parts) >= 2 {
+			lat, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+			lon, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			if err1 == nil && err2 == nil {
+				// Validate coordinate ranges
+				if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+					return &lat, &lon
+				}
+			}
+		}
+	}
+
+	// Format 2: "lat:43.2,lon:76.8"
+	if strings.Contains(location, "lat:") && strings.Contains(location, "lon:") {
+		parts := strings.Split(location, ",")
+		if len(parts) >= 2 {
+			latStr := strings.TrimPrefix(strings.TrimSpace(parts[0]), "lat:")
+			lonStr := strings.TrimPrefix(strings.TrimSpace(parts[1]), "lon:")
+
+			lat, err1 := strconv.ParseFloat(latStr, 64)
+			lon, err2 := strconv.ParseFloat(lonStr, 64)
+			if err1 == nil && err2 == nil {
+				if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+					return &lat, &lon
+				}
+			}
+		}
+	}
+
+	// Format 3: "latitude: 43.2, longitude: 76.8"
+	if strings.Contains(location, "latitude:") && strings.Contains(location, "longitude:") {
+		latStart := strings.Index(location, "latitude:") + 9
+		lonStart := strings.Index(location, "longitude:") + 10
+
+		latEnd := strings.Index(location[latStart:], ",")
+		if latEnd == -1 {
+			latEnd = len(location) - latStart
+		}
+
+		lonEnd := len(location) - lonStart
+		if commaIndex := strings.Index(location[lonStart:], ","); commaIndex != -1 {
+			lonEnd = commaIndex
+		}
+
+		latStr := strings.TrimSpace(location[latStart : latStart+latEnd])
+		lonStr := strings.TrimSpace(location[lonStart : lonStart+lonEnd])
+
+		lat, err1 := strconv.ParseFloat(latStr, 64)
+		lon, err2 := strconv.ParseFloat(lonStr, 64)
+		if err1 == nil && err2 == nil {
+			if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+				return &lat, &lon
+			}
+		}
+	}
+
+	// Format 4: JSON-like format {"lat": 43.2, "lon": 76.8}
+	if strings.Contains(location, "{") && strings.Contains(location, "}") {
+		var coords map[string]float64
+		if err := json.Unmarshal([]byte(location), &coords); err == nil {
+			if lat, ok1 := coords["lat"]; ok1 {
+				if lon, ok2 := coords["lon"]; ok2 {
+					if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+						return &lat, &lon
+					}
+				}
+			}
+			// Also try latitude/longitude keys
+			if lat, ok1 := coords["latitude"]; ok1 {
+				if lon, ok2 := coords["longitude"]; ok2 {
+					if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+						return &lat, &lon
+					}
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+// GetLottoStats возвращает статистику лотереи с правильной обработкой NULL значений
+func (r *UserRepository) GetLottoStats(ctx context.Context) *LottoStats {
+	const q = `
+		SELECT 
+			COUNT(CASE WHEN who_paid IS NOT NULL AND who_paid != '' THEN 1 END) as paid,
+			COUNT(CASE WHEN who_paid IS NULL OR who_paid = '' THEN 1 END) as unpaid
+		FROM loto;
+	`
+
+	var stats LottoStats
+	if err := r.db.QueryRowContext(ctx, q).Scan(&stats.Paid, &stats.Unpaid); err != nil {
+		return &LottoStats{Paid: 0, Unpaid: 0}
+	}
+
+	return &stats
+}
+
+// GetGeoStats возвращает географическую статистику
+func (r *UserRepository) GetGeoStats(ctx context.Context) *GeoStats {
+	const q = `
+		SELECT location, COUNT(*) as count
+		FROM geo
+		WHERE location IS NOT NULL AND location != ''
+		GROUP BY location;
+	`
+
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		return &GeoStats{Almaty: 0, Nursultan: 0, Shymkent: 0, Karaganda: 0, Others: 0}
+	}
+	defer rows.Close()
+
+	var stats GeoStats
+	for rows.Next() {
+		var location string
+		var count int
+		if err := rows.Scan(&location, &count); err != nil {
+			continue
+		}
+
+		// Parse coordinates and categorize by city
+		lat, lon := parseCoordinates(location)
+		if lat != nil && lon != nil {
+			// Categorize by approximate coordinates for Kazakhstan cities
+			if *lat >= 43.0 && *lat <= 43.5 && *lon >= 76.5 && *lon <= 77.2 {
+				stats.Almaty += count // Almaty region
+			} else if *lat >= 51.0 && *lat <= 51.5 && *lon >= 71.0 && *lon <= 71.8 {
+				stats.Nursultan += count // Nur-Sultan/Astana region
+			} else if *lat >= 42.0 && *lat <= 42.5 && *lon >= 69.0 && *lon <= 70.0 {
+				stats.Shymkent += count // Shymkent region
+			} else if *lat >= 49.5 && *lat <= 50.0 && *lon >= 72.5 && *lon <= 73.5 {
+				stats.Karaganda += count // Karaganda region
+			} else {
+				stats.Others += count
+			}
+		} else {
+			stats.Others += count
+		}
+	}
+
+	return &stats
+}
+
+// ═══════════════════════════════════════════════════════

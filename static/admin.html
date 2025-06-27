@@ -787,7 +787,7 @@
       <p class="subtitle">Нақты уақыттағы деректер мониторингі</p>
       <div class="status-indicator" id="connectionStatus">
         <div class="pulse"></div>
-        <span>Тікелей жаңарту: 2 секунд</span>
+        <span>Тікелей жаңарту: 10 секунд</span>
       </div>
     </div>
 
@@ -819,20 +819,20 @@
 
       <div class="stat-card warning">
         <div class="stat-header">
-          <span class="stat-title">Лотерея қатысушылары</span>
-          <span class="stat-icon">🎰</span>
+          <span class="stat-title">Тапсырыстар картада</span>
+          <span class="stat-icon">📍</span>
         </div>
-        <div class="stat-value" id="totalLotto">0</div>
-        <div class="stat-change positive" id="lottoChange">
+        <div class="stat-value" id="totalOrdersOnMap">0</div>
+        <div class="stat-change positive" id="ordersMapChange">
           <span>↗</span>
-          <span>+0 белсенді</span>
+          <span>+0 геолокациямен</span>
         </div>
       </div>
 
       <div class="stat-card danger">
         <div class="stat-header">
           <span class="stat-title">Геолокация деректері</span>
-          <span class="stat-icon">📍</span>
+          <span class="stat-icon">🗺️</span>
         </div>
         <div class="stat-value" id="totalGeo">0</div>
         <div class="stat-change positive" id="geoChange">
@@ -845,13 +845,16 @@
     <!-- Orders Map Section -->
     <div class="chart-card">
       <div class="chart-header">
-        <h3 class="chart-title" style="margin: 0;">🗺️ Тапсырыстар картасы</h3>
+        <h3 class="chart-title" style="margin: 0;">🗺️ Тапсырыстар картасы - Барлық тапсырыстар</h3>
         <div class="map-controls-header">
           <button class="map-control-btn-header" onclick="toggleMapSize()" title="Картаны кеңейту/кішірейту">
             <span id="mapSizeIcon">⬜</span>
           </button>
           <button class="map-control-btn-header" onclick="centerMapOnOrders()" title="Барлық тапсырыстарға орталау">
             <span>🎯</span>
+          </button>
+          <button class="map-control-btn-header" onclick="refreshOrdersMap()" title="Картаны жаңарту">
+            <span>🔄</span>
           </button>
           <span class="orders-counter" id="ordersCounter">0 тапсырыс</span>
         </div>
@@ -899,55 +902,12 @@
           <canvas id="clientsChart"></canvas>
         </div>
       </div>
-
-      <div class="chart-card">
-        <h3 class="chart-title">Лотерея статистикасы</h3>
-        <div class="chart-container">
-          <canvas id="lottoChart"></canvas>
-        </div>
-      </div>
-
-      <div class="chart-card">
-        <h3 class="chart-title">Геолокация деректері</h3>
-        <div class="chart-container">
-          <canvas id="geoChart"></canvas>
-        </div>
-      </div>
     </div>
 
     <!-- Data Tables -->
     <div class="table-card">
       <div class="table-header">
-        <h3 class="table-title">Соңғы пайдаланушылар (Just кестесі)</h3>
-        <button class="refresh-btn" onclick="refreshData()">
-          <span>🔄</span>
-          <span>Жаңарту</span>
-        </button>
-      </div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Telegram ID</th>
-              <th>Пайдаланушы аты</th>
-              <th>Тіркелу күні</th>
-            </tr>
-          </thead>
-          <tbody id="justTableBody">
-            <tr>
-              <td colspan="3" class="loading">
-                <div class="loading-spinner"></div>
-                Деректер жүктелуде...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-header">
-        <h3 class="table-title">Клиенттер деректері</h3>
+        <h3 class="table-title">Соңғы клиенттер (геолокациямен)</h3>
         <button class="refresh-btn" onclick="refreshData()">
           <span>🔄</span>
           <span>Жаңарту</span>
@@ -961,45 +921,14 @@
               <th>АЖТ</th>
               <th>Байланыс</th>
               <th>Мекенжай</th>
+              <th>Координаттар</th>
               <th>Төлем күні</th>
               <th>Статус</th>
             </tr>
           </thead>
-          <tbody id="clientTableBody">
+          <tbody id="ordersTableBody">
             <tr>
-              <td colspan="6" class="loading">
-                <div class="loading-spinner"></div>
-                Деректер жүктелуде...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-header">
-        <h3 class="table-title">Лотерея қатысушылары</h3>
-        <button class="refresh-btn" onclick="refreshData()">
-          <span>🔄</span>
-          <span>Жаңарту</span>
-        </button>
-      </div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Telegram ID</th>
-              <th>Лотерея ID</th>
-              <th>АЖТ</th>
-              <th>Байланыс</th>
-              <th>Төлем күні</th>
-              <th>Төлеуші</th>
-            </tr>
-          </thead>
-          <tbody id="lottoTableBody">
-            <tr>
-              <td colspan="6" class="loading">
+              <td colspan="7" class="loading">
                 <div class="loading-spinner"></div>
                 Деректер жүктелуде...
               </td>
@@ -1023,12 +952,14 @@
             <tr>
               <th>Telegram ID</th>
               <th>Орналасу</th>
+              <th>Координаттар</th>
               <th>Тіркелу күні</th>
+              <th>Картада көрсету</th>
             </tr>
           </thead>
           <tbody id="geoTableBody">
             <tr>
-              <td colspan="3" class="loading">
+              <td colspan="5" class="loading">
                 <div class="loading-spinner"></div>
                 Деректер жүктелуде...
               </td>
@@ -1092,19 +1023,22 @@
     }
 
     // Global variables for charts and maps
-    let usersChart, clientsChart, lottoChart, geoChart;
+    let usersChart, clientsChart;
     let ordersMap = null;
     let orderMarkers = [];
+    let geoMarkers = [];
     let selectedOrderMarker = null;
     let previousData = {
       users: 0,
       clients: 0,
-      lotto: 0,
+      ordersOnMap: 0,
       geo: 0
     };
     let lastUpdateTime = null;
     let connectionRetries = 0;
     const maxRetries = 3;
+    let allOrdersData = [];
+    let allGeoData = [];
 
     // Initialize orders map with Yandex Maps 3.0
     async function initializeOrdersMap() {
@@ -1134,6 +1068,12 @@
         ordersMap.addChild(new YMapDefaultFeaturesLayer());
 
         console.log('✅ Orders Map initialized successfully');
+        
+        // Load initial data after map is ready
+        setTimeout(() => {
+          fetchAndDisplayOrders();
+        }, 1000);
+        
       } catch (error) {
         console.error('❌ Error initializing Orders Map:', error);
         updateConnectionStatus('error', 'Карта қатесі');
@@ -1149,15 +1089,176 @@
           statusEl.querySelector('span').textContent = message || 'Байланыс қатесі';
         } else {
           statusEl.className = 'status-indicator';
-          statusEl.querySelector('span').textContent = message || 'Тікелей жаңарту: 2 секунд';
+          statusEl.querySelector('span').textContent = message || 'Тікелей жаңарту: 10 секунд';
         }
       }
     }
 
-    // Update orders map with client data
-    function updateOrdersMap(clientData) {
-      if (!ordersMap || !clientData || clientData.length === 0) {
+    // Fetch all orders and geo data from multiple sources
+    async function fetchAndDisplayOrders() {
+      try {
+        console.log('🔄 Fetching orders and geo data for map display...');
+        updateConnectionStatus('loading', 'Деректерді жүктеу...');
+
+        // Fetch dashboard data
+        const dashboardResponse = await fetch('/api/admin/dashboard', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-cache'
+        });
+        
+        if (!dashboardResponse.ok) {
+          throw new Error(`Dashboard API error: ${dashboardResponse.status}`);
+        }
+        
+        const dashboardData = await dashboardResponse.json();
+        console.log('✅ Dashboard data fetched:', {
+          success: dashboardData.success,
+          totalUsers: dashboardData.totalUsers,
+          totalClients: dashboardData.totalClients,
+          totalGeo: dashboardData.totalGeo,
+          clientDataCount: dashboardData.clientData ? dashboardData.clientData.length : 0,
+          geoDataCount: dashboardData.geoData ? dashboardData.geoData.length : 0,
+          ordersDataCount: dashboardData.ordersData ? dashboardData.ordersData.length : 0
+        });
+
+        // Update stats
+        updateStats(dashboardData);
+        updateCharts(dashboardData);
+
+        // Process all data for map display
+        let allOrdersForMap = [];
+        
+        // 1. Use ordersData if available (should be the comprehensive data from backend)
+        if (dashboardData.ordersData && Array.isArray(dashboardData.ordersData)) {
+          allOrdersForMap = dashboardData.ordersData.filter(order => {
+            return order.latitude != null && 
+                   order.longitude != null &&
+                   !isNaN(order.latitude) && 
+                   !isNaN(order.longitude) &&
+                   Math.abs(order.latitude) <= 90 && 
+                   Math.abs(order.longitude) <= 180;
+          });
+          console.log(`📊 Using ordersData: ${allOrdersForMap.length} orders with valid coordinates`);
+        }
+        
+        // 2. Fallback: Add client data with geo coordinates if ordersData is not available
+        if (allOrdersForMap.length === 0 && dashboardData.clientData && Array.isArray(dashboardData.clientData)) {
+          dashboardData.clientData.forEach(client => {
+            if (client.hasGeo && client.latitude && client.longitude && 
+                !isNaN(client.latitude) && !isNaN(client.longitude)) {
+              
+              let status = 'processing';
+              let statusIcon = '📦';
+              
+              if (client.checks) {
+                status = 'delivered';
+                statusIcon = '✅';
+              } else if (client.dataPay && client.dataPay !== 'null' && client.dataPay !== '') {
+                status = 'pending';
+                statusIcon = '⏳';
+              }
+
+              allOrdersForMap.push({
+                userID: client.userID,
+                userName: client.userName,
+                fio: client.fio || client.userName || 'Белгісіз',
+                contact: client.contact || 'Белгісіз',
+                address: client.address || 'Белгісіз',
+                dateRegister: client.dateRegister || '',
+                dataPay: client.dataPay || '',
+                checks: client.checks || false,
+                latitude: parseFloat(client.latitude),
+                longitude: parseFloat(client.longitude),
+                status: status,
+                statusIcon: statusIcon,
+                source: 'client_with_geo'
+              });
+            }
+          });
+          console.log(`📊 Using clientData fallback: ${allOrdersForMap.length} orders`);
+        }
+
+        // 3. Final fallback: Add pure geo data that might not be in client table
+        if (dashboardData.geoData && Array.isArray(dashboardData.geoData)) {
+          dashboardData.geoData.forEach(geo => {
+            if (geo.location && geo.userID) {
+              const coordMatch = geo.location.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+              if (coordMatch) {
+                const lat = parseFloat(coordMatch[1]);
+                const lon = parseFloat(coordMatch[2]);
+                
+                if (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+                  const existingOrder = allOrdersForMap.find(order => order.userID === geo.userID);
+                  if (!existingOrder) {
+                    allOrdersForMap.push({
+                      userID: geo.userID,
+                      userName: 'Пайдаланушы',
+                      fio: 'Геолокация деректері',
+                      contact: 'Белгісіз',
+                      address: geo.location,
+                      dateRegister: geo.dataReg || '',
+                      dataPay: '',
+                      checks: false,
+                      latitude: lat,
+                      longitude: lon,
+                      status: 'processing',
+                      statusIcon: '📍',
+                      source: 'geo_only'
+                    });
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Store data globally
+        allOrdersData = allOrdersForMap;
+        allGeoData = dashboardData.geoData || [];
+
+        console.log(`📍 Final processed ${allOrdersForMap.length} orders for map display:`, {
+          withClientData: allOrdersForMap.filter(o => o.source === 'client_with_geo').length,
+          fromOrdersData: allOrdersForMap.filter(o => !o.source).length,
+          geoOnly: allOrdersForMap.filter(o => o.source === 'geo_only').length,
+          delivered: allOrdersForMap.filter(o => o.status === 'delivered').length,
+          pending: allOrdersForMap.filter(o => o.status === 'pending').length,
+          processing: allOrdersForMap.filter(o => o.status === 'processing').length
+        });
+
+        // Update map with all orders
+        updateOrdersMap(allOrdersForMap);
+        
+        // Update tables
+        updateOrdersTable(allOrdersForMap);
+        updateGeoTable(allGeoData);
+
+        // Update stats
+        const ordersOnMapCount = allOrdersForMap.length;
+        document.getElementById('totalOrdersOnMap').textContent = ordersOnMapCount;
+        updateChangeIndicator('ordersMapChange', ordersOnMapCount - previousData.ordersOnMap);
+        previousData.ordersOnMap = ordersOnMapCount;
+
+        connectionRetries = 0;
+        lastUpdateTime = new Date();
+        updateConnectionStatus('success', `Соңғы жаңарту: ${lastUpdateTime.toLocaleTimeString()}`);
+        
+      } catch (error) {
+        console.error('❌ Error fetching orders data:', error);
+        connectionRetries++;
+        updateConnectionStatus('error', `Байланыс қатесі (${connectionRetries}/${maxRetries})`);
+        
+        document.getElementById('ordersCounter').textContent = 'Қате жүктеуде';
+      }
+    }
+
+    // Update orders map with orders data
+    function updateOrdersMap(ordersData) {
+      if (!ordersMap || !ordersData || ordersData.length === 0) {
         document.getElementById('ordersCounter').textContent = '0 тапсырыс';
+        console.log('❌ No orders map or orders data available');
         return;
       }
 
@@ -1172,30 +1273,14 @@
         });
         orderMarkers = [];
 
-        // Filter clients with valid coordinates
-        const validOrders = clientData.filter(client => {
-          return client.hasGeo && 
-                 client.latitude != null && 
-                 client.longitude != null &&
-                 !isNaN(client.latitude) && 
-                 !isNaN(client.longitude) &&
-                 Math.abs(client.latitude) <= 90 && 
-                 Math.abs(client.longitude) <= 180;
-        });
-
-        console.log(`📍 Processing ${validOrders.length} valid orders with geolocation for map display`);
+        console.log(`📍 Displaying ${ordersData.length} orders on map`);
 
         // Update counter
-        document.getElementById('ordersCounter').textContent = `${validOrders.length} тапсырыс`;
+        document.getElementById('ordersCounter').textContent = `${ordersData.length} тапсырыс`;
 
-        if (validOrders.length === 0) {
-          console.log('No valid orders with geolocation found');
-          return;
-        }
-
-        // Add markers for each valid order
-        validOrders.forEach((client, index) => {
-          addOrderMarker(client, [client.longitude, client.latitude], index);
+        // Add markers for each order
+        ordersData.forEach((order, index) => {
+          addOrderMarkerToMap(order, [order.longitude, order.latitude], index);
         });
 
         // Center map on orders after a short delay
@@ -1209,21 +1294,12 @@
     }
 
     // Add order marker to map
-    function addOrderMarker(client, coordinates, index) {
+    function addOrderMarkerToMap(order, coordinates, index) {
       try {
         const {YMapMarker} = ymaps3;
         
-        // Determine order status based on client data
-        let status = 'processing'; // default
-        let statusIcon = '📦';
-        
-        if (client.checks) {
-          status = 'delivered';
-          statusIcon = '✅';
-        } else if (client.dataPay && client.dataPay !== 'null' && client.dataPay !== '') {
-          status = 'pending';
-          statusIcon = '⏳';
-        }
+        let status = order.status || 'processing';
+        let statusIcon = order.statusIcon || '📦';
 
         // Create marker element
         const markerElement = document.createElement('div');
@@ -1236,7 +1312,7 @@
         // Add click handler
         markerElement.addEventListener('click', (e) => {
           e.stopPropagation();
-          showOrderInfo(client);
+          showOrderInfo(order);
           
           // Highlight selected marker
           document.querySelectorAll('.order-marker').forEach(m => {
@@ -1258,7 +1334,7 @@
         ordersMap.addChild(marker);
         orderMarkers.push(marker);
 
-        console.log(`✅ Added marker ${index + 1} for order ${client.userID} at [${coordinates[1]}, ${coordinates[0]}]`);
+        console.log(`✅ Added marker ${index + 1} for order ${order.userID} at [${coordinates[1]}, ${coordinates[0]}] with status: ${status}`);
 
       } catch (error) {
         console.error('Error adding order marker:', error);
@@ -1266,42 +1342,27 @@
     }
 
     // Show order information panel
-    function showOrderInfo(client) {
+    function showOrderInfo(order) {
       const panel = document.getElementById('mapInfoPanel');
       const content = document.getElementById('mapInfoContent');
       
-      // Determine status
-      let status = 'processing';
-      let statusText = 'Өңделуде';
-      let statusClass = 'processing';
-      
-      if (client.checks) {
-        status = 'delivered';
-        statusText = 'Жеткізілген';
-        statusClass = 'delivered';
-      } else if (client.dataPay && client.dataPay !== 'null' && client.dataPay !== '') {
-        status = 'pending';
-        statusText = 'Күтуде';
-        statusClass = 'pending';
-      }
+      const status = order.status || 'processing';
+      const statusText = status === 'delivered' ? 'Жеткізілген' : 
+                        status === 'pending' ? 'Күтуде' : 'Өңделуде';
+      const statusClass = status;
 
-      // Format contact and address
-      const contact = client.contact || 'Белгісіз';
-      const fio = (client.fio && typeof client.fio === 'string' && client.fio !== 'null') 
-        ? client.fio 
-        : client.userName || 'Белгісіз';
-      const address = (client.address && typeof client.address === 'string' && client.address !== 'null') 
-        ? client.address 
-        : 'Белгісіз';
-      const payDate = (client.dataPay && client.dataPay !== 'null') ? client.dataPay : 'Белгісіз';
-      const coordinates = client.latitude && client.longitude 
-        ? `${client.latitude.toFixed(6)}, ${client.longitude.toFixed(6)}`
+      const contact = order.contact || 'Белгісіз';
+      const fio = order.fio || order.userName || 'Белгісіз';
+      const address = order.address || 'Белгісіз';
+      const dataPay = order.dataPay || 'Белгісіз';
+      const coordinates = order.latitude && order.longitude 
+        ? `${order.latitude.toFixed(6)}, ${order.longitude.toFixed(6)}`
         : 'Белгісіз';
 
       content.innerHTML = `
         <div class="info-row">
           <span class="info-label">ID:</span>
-          <span class="info-value">#${client.userID}</span>
+          <span class="info-value">#${order.userID}</span>
         </div>
         <div class="info-row">
           <span class="info-label">АЖТ:</span>
@@ -1321,19 +1382,25 @@
         </div>
         <div class="info-row">
           <span class="info-label">Төлем күні:</span>
-          <span class="info-value">${payDate}</span>
+          <span class="info-value">${dataPay}</span>
         </div>
+        ${order.source ? `
+        <div class="info-row">
+          <span class="info-label">Дерек көзі:</span>
+          <span class="info-value">${order.source === 'client_with_geo' ? 'Клиент+Гео' : order.source === 'geo_only' ? 'Тек гео' : 'Бэкенд'}</span>
+        </div>
+        ` : ''}
         <div class="order-status-badge ${statusClass}">
-          ${statusText}
+          ${order.statusIcon || '📦'} ${statusText}
         </div>
       `;
       
       panel.style.display = 'block';
 
       // Center map on this order
-      if (client.latitude && client.longitude) {
+      if (order.latitude && order.longitude) {
         ordersMap.setLocation({
-          center: [client.longitude, client.latitude],
+          center: [order.longitude, order.latitude],
           zoom: 15,
           duration: 1000
         });
@@ -1400,6 +1467,12 @@
       } catch (error) {
         console.error('Error centering map on orders:', error);
       }
+    }
+
+    // Refresh orders map
+    function refreshOrdersMap() {
+      console.log('🔄 Refreshing orders map...');
+      fetchAndDisplayOrders();
     }
 
     // Initialize charts
@@ -1472,98 +1545,11 @@
           }
         }
       });
-
-      // Lotto Chart
-      const lottoCtx = document.getElementById('lottoChart').getContext('2d');
-      lottoChart = new Chart(lottoCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Төленген', 'Төленбеген'],
-          datasets: [{
-            data: [0, 0],
-            backgroundColor: ['#ff9800', '#f57c00'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom'
-            }
-          }
-        }
-      });
-
-      // Geo Chart
-      const geoCtx = document.getElementById('geoChart').getContext('2d');
-      geoChart = new Chart(geoCtx, {
-        type: 'radar',
-        data: {
-          labels: ['Алматы', 'Нұр-Сұлтан', 'Шымкент', 'Қарағанды', 'Басқа қалалар'],
-          datasets: [{
-            label: 'Геолокация деректері',
-            data: [0, 0, 0, 0, 0],
-            borderColor: '#f44336',
-            backgroundColor: 'rgba(244, 67, 54, 0.2)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            r: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
-        }
-      });
     }
 
     // Enhanced data fetching with better error handling
     async function fetchData() {
-      try {
-        console.log('🔄 Fetching dashboard data...');
-        const response = await fetch('/api/admin/dashboard', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          cache: 'no-cache'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Dashboard data fetched successfully:', {
-          totalUsers: data.totalUsers,
-          totalClients: data.totalClients,
-          clientsWithGeo: data.clientData ? data.clientData.filter(c => c.hasGeo).length : 0
-        });
-        
-        connectionRetries = 0; // Reset retry counter on success
-        lastUpdateTime = new Date();
-        updateConnectionStatus('success', `Соңғы жаңарту: ${lastUpdateTime.toLocaleTimeString()}`);
-        
-        return data;
-      } catch (error) {
-        console.error('❌ Error fetching dashboard data:', error);
-        connectionRetries++;
-        updateConnectionStatus('error', `Байланыс қатесі (${connectionRetries}/${maxRetries})`);
-        return null;
-      }
+      return await fetchAndDisplayOrders();
     }
 
     // Update statistics cards
@@ -1573,27 +1559,21 @@
       // Update counters
       document.getElementById('totalUsers').textContent = data.totalUsers || 0;
       document.getElementById('totalClients').textContent = data.totalClients || 0;
-      document.getElementById('totalLotto').textContent = data.totalLotto || 0;
       document.getElementById('totalGeo').textContent = data.totalGeo || 0;
 
       // Update changes
       const usersChange = (data.totalUsers || 0) - previousData.users;
       const clientsChange = (data.totalClients || 0) - previousData.clients;
-      const lottoChange = (data.totalLotto || 0) - previousData.lotto;
       const geoChange = (data.totalGeo || 0) - previousData.geo;
 
       updateChangeIndicator('usersChange', usersChange);
       updateChangeIndicator('clientsChange', clientsChange);
-      updateChangeIndicator('lottoChange', lottoChange);
       updateChangeIndicator('geoChange', geoChange);
 
       // Store current data for next comparison
-      previousData = {
-        users: data.totalUsers || 0,
-        clients: data.totalClients || 0,
-        lotto: data.totalLotto || 0,
-        geo: data.totalGeo || 0
-      };
+      previousData.users = data.totalUsers || 0;
+      previousData.clients = data.totalClients || 0;
+      previousData.geo = data.totalGeo || 0;
     }
 
     // Update change indicators
@@ -1647,298 +1627,202 @@
         }
         clientsChart.update('none');
       }
-
-      // Lotto Chart
-      if (lottoChart && data.lottoStats) {
-        lottoChart.data.datasets[0].data = [
-          data.lottoStats.paid || 0,
-          data.lottoStats.unpaid || 0
-        ];
-        lottoChart.update('none');
-      }
-
-      // Geo Chart
-      if (geoChart && data.geoStats) {
-        geoChart.data.datasets[0].data = [
-          data.geoStats.almaty || 0,
-          data.geoStats.nursultan || 0,
-          data.geoStats.shymkent || 0,
-          data.geoStats.karaganda || 0,
-          data.geoStats.others || 0
-        ];
-        geoChart.update('none');
-      }
     }
 
-    // Update tables with enhanced geolocation display
-    function updateTables(data) {
-      if (!data) return;
-
-      // Update Just table
-      if (data.justData) {
-        updateTable('justTableBody', data.justData, [
-          'userID', 'userName', 'dateRegistered'
-        ]);
-      }
-
-      // Update Client table and orders map
-      if (data.clientData) {
-        updateTable('clientTableBody', data.clientData, [
-          'userID', 'fio', 'contact', 'address', 'dataPay'
-        ], (row, item) => {
-          // Add status badge
-          const statusCell = document.createElement('td');
-          const badge = document.createElement('span');
-          badge.className = item.checks ? 'badge success' : 'badge warning';
-          badge.textContent = item.checks ? 'Расталған' : 'Растамаған';
-          
-          // Add geo indicator
-          if (item.hasGeo && item.latitude && item.longitude) {
-            const geoIcon = document.createElement('span');
-            geoIcon.textContent = ' 📍';
-            geoIcon.title = `Координаттар: ${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}`;
-            geoIcon.style.cursor = 'help';
-            badge.appendChild(geoIcon);
-          }
-          
-          statusCell.appendChild(badge);
-          row.appendChild(statusCell);
-        });
-        
-        // Update orders map with client data
-        updateOrdersMap(data.clientData);
-        
-        // Log geolocation statistics
-        const withGeo = data.clientData.filter(c => c.hasGeo).length;
-        const total = data.clientData.length;
-        console.log(`📊 Geolocation stats: ${withGeo}/${total} clients have location data`);
-      }
-
-      // Update Lotto table
-      if (data.lottoData) {
-        updateTable('lottoTableBody', data.lottoData, [
-          'userID', 'lotoID', 'fio', 'contact', 'datePay', 'whoPaid'
-        ]);
-      }
-
-      // Update Geo table
-      if (data.geoData) {
-        updateTable('geoTableBody', data.geoData, [
-          'userID', 'location', 'dataReg'
-        ], (row, item) => {
-          // Enhanced location display
-          const locationCell = row.children[1]; // location column
-          if (locationCell && item.location) {
-            // Try to parse coordinates from location
-            const coordMatch = item.location.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
-            if (coordMatch) {
-              const lat = parseFloat(coordMatch[1]);
-              const lon = parseFloat(coordMatch[2]);
-              locationCell.innerHTML = `
-                <div style="font-size: 0.9em;">
-                  <div>📍 ${lat.toFixed(6)}, ${lon.toFixed(6)}</div>
-                  <div style="color: var(--text-muted); font-size: 0.8em;">${item.location}</div>
-                </div>
-              `;
-              locationCell.style.cursor = 'pointer';
-              locationCell.title = 'Картада көру үшін басыңыз';
-              locationCell.onclick = () => {
-                if (ordersMap) {
-                  ordersMap.setLocation({
-                    center: [lon, lat],
-                    zoom: 16,
-                    duration: 1000
-                  });
-                  // Show info about this location
-                  showLocationInfo(item, lat, lon);
-                }
-              };
-            }
-          }
-        });
-      }
-    }
-
-    // Show location info for geo data
-    function showLocationInfo(geoItem, lat, lon) {
-      const panel = document.getElementById('mapInfoPanel');
-      const content = document.getElementById('mapInfoContent');
-      
-      content.innerHTML = `
-        <div class="info-row">
-          <span class="info-label">Пайдаланушы ID:</span>
-          <span class="info-value">#${geoItem.userID}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Координаттар:</span>
-          <span class="info-value">${lat.toFixed(6)}, ${lon.toFixed(6)}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Орналасу:</span>
-          <span class="info-value">${geoItem.location}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Тіркелу күні:</span>
-          <span class="info-value">${geoItem.dataReg || 'Белгісіз'}</span>
-        </div>
-        <div class="order-status-badge processing">
-          Геолокация деректері
-        </div>
-      `;
-      
-      panel.style.display = 'block';
-    }
-
-    // Generic table update function
-    function updateTable(tableBodyId, data, columns, customCell = null) {
-      const tbody = document.getElementById(tableBodyId);
+    // Update orders table
+    function updateOrdersTable(ordersData) {
+      const tbody = document.getElementById('ordersTableBody');
       if (!tbody) return;
 
-      tbody.innerHTML = '';
-
-      if (!data || data.length === 0) {
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
-        cell.colSpan = columns.length + (customCell ? 1 : 0);
-        cell.textContent = 'Деректер жоқ';
-        cell.className = 'loading';
-        row.appendChild(cell);
-        tbody.appendChild(row);
+      if (!ordersData || ordersData.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              Геолокациясы бар тапсырыстар табылмады
+            </td>
+          </tr>
+        `;
         return;
       }
 
-      data.slice(0, 50).forEach(item => { // Show only last 50 records
-        const row = document.createElement('tr');
-        
-        columns.forEach(column => {
-          const cell = document.createElement('td');
-          let value = item[column];
-          
-          // Format data based on column type
-          if (column.includes('userID') && value) {
-            value = value.toString();
-          } else if (column.includes('date') || column.includes('Date')) {
-            value = value || 'Белгісіз';
-          } else if (column === 'location' && value) {
-            // Truncate long location strings
-            value = value.length > 50 ? value.substring(0, 50) + '...' : value;
-          }
-          
-          cell.textContent = value || 'Жоқ';
-          row.appendChild(cell);
-        });
+      tbody.innerHTML = '';
+      
+      // Sort by latest first
+      const sortedOrders = ordersData.sort((a, b) => {
+        const dateA = new Date(a.dataPay || a.dateRegister || '1970-01-01');
+        const dateB = new Date(b.dataPay || b.dateRegister || '1970-01-01');
+        return dateB - dateA;
+      });
 
-        // Add custom cell if provided
-        if (customCell) {
-          customCell(row, item);
-        }
+      sortedOrders.forEach(order => {
+        const row = document.createElement('tr');
+        row.style.cursor = 'pointer';
+        row.onclick = () => {
+          showOrderInfo(order);
+          // Center map on this order
+          if (order.latitude && order.longitude) {
+            ordersMap.setLocation({
+              center: [order.longitude, order.latitude],
+              zoom: 16,
+              duration: 1000
+            });
+          }
+        };
+
+        const statusBadge = getStatusBadge(order.status, order.statusIcon);
+        const coordinates = `${order.latitude.toFixed(6)}, ${order.longitude.toFixed(6)}`;
+
+        row.innerHTML = `
+          <td>${order.userID}</td>
+          <td>${order.fio || 'Белгісіз'}</td>
+          <td>${order.contact || 'Белгісіз'}</td>
+          <td>${order.address || 'Белгісіз'}</td>
+          <td style="font-family: monospace; font-size: 0.85rem;">${coordinates}</td>
+          <td>${order.dataPay || order.dateRegister || 'Белгісіз'}</td>
+          <td>${statusBadge}</td>
+        `;
 
         tbody.appendChild(row);
       });
     }
 
-    // Refresh data manually
-    async function refreshData() {
-      console.log('🔄 Manually refreshing data...');
-      const data = await fetchData();
-      if (data) {
-        updateStats(data);
-        updateCharts(data);
-        updateTables(data);
-      }
-    }
+    // Update geo table
+    function updateGeoTable(geoData) {
+      const tbody = document.getElementById('geoTableBody');
+      if (!tbody) return;
 
-    // Auto-refresh with connection status
-    async function autoRefresh() {
-      try {
-        const data = await fetchData();
-        if (data) {
-          updateStats(data);
-          updateCharts(data);
-          updateTables(data);
-          
-          // Update connection status
-          updateConnectionStatus('success', `Соңғы жаңарту: ${new Date().toLocaleTimeString()}`);
-        } else {
-          // Handle connection errors
-          if (connectionRetries >= maxRetries) {
-            updateConnectionStatus('error', 'Байланыс үзілді - қайта қосылуда...');
-            // Try to reconnect after longer delay
-            setTimeout(async () => {
-              connectionRetries = 0;
-              await autoRefresh();
-            }, 10000);
+      if (!geoData || geoData.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              Геолокация деректері табылмады
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      
+      geoData.forEach(geo => {
+        const row = document.createElement('tr');
+        
+        // Parse coordinates
+        let lat = null, lon = null, coordinates = 'Белгісіз';
+        if (geo.location) {
+          const coordMatch = geo.location.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+          if (coordMatch) {
+            lat = parseFloat(coordMatch[1]);
+            lon = parseFloat(coordMatch[2]);
+            coordinates = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
           }
         }
-      } catch (error) {
-        console.error('Auto-refresh error:', error);
-        updateConnectionStatus('error', 'Автожаңарту қатесі');
+
+        row.innerHTML = `
+          <td>${geo.userID}</td>
+          <td>${geo.location || 'Белгісіз'}</td>
+          <td style="font-family: monospace; font-size: 0.85rem;">${coordinates}</td>
+          <td>${geo.dataReg || 'Белгісіз'}</td>
+          <td>
+            <button class="refresh-btn" style="padding: 4px 8px; font-size: 0.8rem;" 
+                    onclick="showLocationOnMap(${lat}, ${lon}, ${geo.userID})" 
+                    ${!lat || !lon ? 'disabled' : ''}>
+              📍 Картада көрсету
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+
+    // Show location on map
+    function showLocationOnMap(lat, lon, userID) {
+      if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+        console.error('Invalid coordinates:', lat, lon);
+        return;
+      }
+
+      if (!ordersMap) {
+        console.error('Map not initialized');
+        return;
+      }
+
+      // Center map on location
+      ordersMap.setLocation({
+        center: [lon, lat],
+        zoom: 16,
+        duration: 1000
+      });
+
+      // Find and show info for this location
+      const order = allOrdersData.find(o => o.userID === userID);
+      if (order) {
+        setTimeout(() => {
+          showOrderInfo(order);
+        }, 1000);
       }
     }
 
-    // Initialize enhanced dashboard
-    async function initializeDashboard() {
-      console.log('🚀 Initializing Enhanced Meily Admin Dashboard...');
+    // Get status badge HTML
+    function getStatusBadge(status, icon) {
+      const statusMap = {
+        'delivered': { class: 'success', text: 'Жеткізілген' },
+        'pending': { class: 'warning', text: 'Күтуде' },
+        'processing': { class: 'danger', text: 'Өңделуде' }
+      };
       
+      const statusInfo = statusMap[status] || statusMap.processing;
+      return `<span class="badge ${statusInfo.class}">${icon || '📦'} ${statusInfo.text}</span>`;
+    }
+
+    // Refresh all data
+    function refreshData() {
+      console.log('🔄 Refreshing all admin data...');
+      fetchAndDisplayOrders();
+    }
+
+    // Initialize application
+    async function initializeApp() {
       try {
+        console.log('🚀 Initializing Admin Panel...');
+        
         // Initialize charts
         initializeCharts();
         
         // Initialize orders map
         await initializeOrdersMap();
         
-        // Initial data load with retry
-        let retryCount = 0;
-        const maxInitRetries = 3;
+        console.log('✅ Admin Panel initialized successfully');
         
-        while (retryCount < maxInitRetries) {
-          const data = await fetchData();
-          if (data) {
-            await refreshData();
-            break;
-          }
-          retryCount++;
-          console.log(`Retry ${retryCount}/${maxInitRetries} for initial data load...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-        if (retryCount === maxInitRetries) {
-          console.error('Failed to load initial data after retries');
-          updateConnectionStatus('error', 'Бастапқы деректерді жүктеу мүмкін болмады');
-        }
-        
-        // Start auto-refresh
-        setInterval(autoRefresh, 2000);
-        
-        console.log('✅ Enhanced Admin Dashboard initialized successfully');
+        // Start periodic refresh every 10 seconds
+        setInterval(() => {
+          fetchAndDisplayOrders();
+        }, 10000);
         
       } catch (error) {
-        console.error('❌ Dashboard initialization error:', error);
+        console.error('❌ Error initializing admin panel:', error);
         updateConnectionStatus('error', 'Инициализация қатесі');
       }
     }
 
-    // Error handling for charts
-    Chart.defaults.plugins.legend.labels.usePointStyle = true;
-    Chart.defaults.elements.point.radius = 4;
-    Chart.defaults.elements.point.hoverRadius = 6;
-
-    // Make functions globally available
-    window.refreshData = refreshData;
-    window.initializeDashboard = initializeDashboard;
+    // Make functions available globally
+    window.toggleTheme = toggleTheme;
     window.toggleMapSize = toggleMapSize;
     window.centerMapOnOrders = centerMapOnOrders;
+    window.refreshOrdersMap = refreshOrdersMap;
     window.closeMapInfo = closeMapInfo;
-    window.toggleTheme = toggleTheme;
+    window.refreshData = refreshData;
+    window.showLocationOnMap = showLocationOnMap;
 
-    // Start dashboard when DOM is ready
+    // Start the application when DOM is ready
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeDashboard);
+      document.addEventListener('DOMContentLoaded', initializeApp);
     } else {
-      initializeDashboard();
+      initializeApp();
     }
 
-    console.log('👑 Meily Cosmetics Admin Dashboard with Orders Map loaded');
+    console.log('🗺️ Meily Admin Panel with Orders Map loaded and ready!');
   </script>
 </body>
 </html>

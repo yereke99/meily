@@ -67,7 +67,7 @@ type ClientDataResponse struct {
 	Message string              `json:"message,omitempty"`
 }
 
-// Enhanced Admin Dashboard structures
+// Enhanced Admin Dashboard structures with PROPER coordinate handling
 type EnhancedDashboardResponse struct {
 	Success        bool                     `json:"success"`
 	TotalUsers     int                      `json:"totalUsers"`
@@ -81,7 +81,25 @@ type EnhancedDashboardResponse struct {
 	ClientData     []ClientEntryWithGeo     `json:"clientData,omitempty"`
 	LottoData      []domain.LotoEntry       `json:"lottoData,omitempty"`
 	GeoData        []domain.GeoEntry        `json:"geoData,omitempty"`
+	OrdersData     []OrderDataForMap        `json:"ordersData,omitempty"` // NEW: Specific for map display
 	HeatmapData    []map[string]interface{} `json:"heatmapData,omitempty"`
+}
+
+// NEW: Specific structure for map orders display
+type OrderDataForMap struct {
+	UserID       int64   `json:"userID"`
+	UserName     string  `json:"userName"`
+	Fio          string  `json:"fio"`
+	Contact      string  `json:"contact"`
+	Address      string  `json:"address"`
+	DateRegister string  `json:"dateRegister"`
+	DatePay      string  `json:"dataPay"`
+	Checks       bool    `json:"checks"`
+	HasGeo       bool    `json:"hasGeo"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	Status       string  `json:"status"`     // "delivered", "pending", "processing"
+	StatusIcon   string  `json:"statusIcon"` // "✅", "⏳", "📦"
 }
 
 // Local structures to match repository types
@@ -447,12 +465,19 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		h.logger.Error("Failed to get user state from Redis", zap.Error(err))
 	}
 
-	priceInt, err := service.ParsePrice(result[3])
+	priceInt, errPdf := service.ParsePrice(result[3])
 	pdf := domain.PdfResult{
 		Total:       state.Count,
 		ActualPrice: priceInt,
 		Qr:          result[6],
 		Bin:         result[10],
+	}
+	if errPdf != nil {
+		h.logger.Error("Failed to parse price from PDF file", zap.Error(err))
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: userID,
+			Text:   "Дұрыс емес pdf file, қайталап көріңіз",
+		})
 	}
 
 	if err := service.Validator(h.cfg, pdf); err != nil {
@@ -461,7 +486,6 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 			ChatID: userID,
 			Text:   "Дұрыс емес pdf file, қайталап көріңіз",
 		})
-		return
 	}
 
 	if state != nil {
@@ -623,7 +647,6 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 }
 
 // API Handlers
-
 // CheckHandler handles /api/check endpoint to verify if user has paid
 func (h *Handler) CheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -710,12 +733,32 @@ func (h *Handler) ClientDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For now, return empty response since we need to implement GetClientByUserID
+	// Get client data by UserID
+	client, err := h.repo.GetClientByUserID(h.ctx, req.TelegramID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(ClientDataResponse{
+				Success: true,
+				Client:  nil,
+				Message: "No client data found",
+			})
+			return
+		}
+		h.logger.Error("Failed to get client data", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(APIResponse{
+			Success: false,
+			Message: "Database error",
+		})
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ClientDataResponse{
 		Success: true,
-		Client:  nil,
-		Message: "No client data found",
+		Client:  client,
+		Message: "Client data found",
 	})
 }
 
@@ -780,14 +823,23 @@ func (h *Handler) ClientSaveHandler(w http.ResponseWriter, r *http.Request) {
 		longitude = 76.889709 // Default to Almaty
 	}
 
-	// Save geolocation data
+	// Save geolocation data with proper coordinates format
+	locationString := fmt.Sprintf("%.6f,%.6f", latitude, longitude)
 	err = h.repo.InsertGeo(h.ctx, domain.GeoEntry{
 		UserID:   telegramID,
-		Location: fmt.Sprintf("%.6f,%.6f - %s", latitude, longitude, address),
+		Location: locationString,
 		DataReg:  time.Now().Format("2006-01-02 15:04:05"),
 	})
 	if err != nil {
 		h.logger.Error("Failed to save geo data",
+			zap.Int64("telegram_id", telegramID),
+			zap.Error(err))
+	}
+
+	// Update client data with delivery information
+	err = h.repo.UpdateClientDeliveryData(h.ctx, telegramID, fio, address, latitude, longitude)
+	if err != nil {
+		h.logger.Error("Failed to update client delivery data",
 			zap.Int64("telegram_id", telegramID),
 			zap.Error(err))
 	}
@@ -891,7 +943,174 @@ func (h *Handler) getTotalCount(ctx context.Context, countFunc func(context.Cont
 	return count
 }
 
-// Enhanced AdminDashboardHandler with REAL data from clients table - NO MOCK DATA!
+// NEW: Helper function to convert AdminClientEntry to OrderDataForMap
+func (h *Handler) convertToOrderDataForMap(adminClients []repository.AdminClientEntry) []OrderDataForMap {
+	orders := make([]OrderDataForMap, 0, len(adminClients))
+
+	for _, client := range adminClients {
+		// Only include clients with valid geolocation
+		if !client.HasGeo || client.Latitude == nil || client.Longitude == nil {
+			continue
+		}
+
+		// Determine order status
+		status := "processing"
+		statusIcon := "📦"
+
+		if client.Checks {
+			status = "delivered"
+			statusIcon = "✅"
+		} else if client.DatePay != "" && client.DatePay != "null" {
+			status = "pending"
+			statusIcon = "⏳"
+		}
+
+		order := OrderDataForMap{
+			UserID:       client.UserID,
+			UserName:     client.UserName,
+			Fio:          client.Fio,
+			Contact:      client.Contact,
+			Address:      client.Address,
+			DateRegister: client.DateRegister,
+			DatePay:      client.DatePay,
+			Checks:       client.Checks,
+			HasGeo:       true,
+			Latitude:     *client.Latitude,
+			Longitude:    *client.Longitude,
+			Status:       status,
+			StatusIcon:   statusIcon,
+		}
+
+		orders = append(orders, order)
+	}
+
+	return orders
+}
+
+// NEW: Helper function to convert ALL geo entries to OrderDataForMap (including those without client records)
+func (h *Handler) convertAllGeoToOrderDataForMap(geoEntries []domain.GeoEntry, clientsMap map[int64]repository.AdminClientEntry) []OrderDataForMap {
+	orders := make([]OrderDataForMap, 0, len(geoEntries))
+
+	for _, geo := range geoEntries {
+		// Parse coordinates from location string
+		lat, lon := h.parseGeoCoordinates(geo.Location)
+		if lat == nil || lon == nil {
+			continue // Skip invalid coordinates
+		}
+
+		// Check if this user is also a client
+		var status, statusIcon, fio, contact, address, dateRegister, datePay string
+		var checks bool
+
+		if client, exists := clientsMap[geo.UserID]; exists {
+			// User is both in geo and client tables
+			fio = client.Fio
+			contact = client.Contact
+			address = client.Address
+			dateRegister = client.DateRegister
+			datePay = client.DatePay
+			checks = client.Checks
+
+			if client.Checks {
+				status = "delivered"
+				statusIcon = "✅"
+			} else if client.DatePay != "" && client.DatePay != "null" {
+				status = "pending"
+				statusIcon = "⏳"
+			} else {
+				status = "processing"
+				statusIcon = "📦"
+			}
+		} else {
+			// User only in geo table (no client record)
+			fio = "Геолокация пайдаланушысы"
+			contact = "Белгісіз"
+			address = geo.Location
+			dateRegister = geo.DataReg
+			datePay = ""
+			checks = false
+			status = "processing"
+			statusIcon = "📍"
+		}
+
+		// Get username from just table or use default
+		userName := fmt.Sprintf("User_%d", geo.UserID)
+
+		order := OrderDataForMap{
+			UserID:       geo.UserID,
+			UserName:     userName,
+			Fio:          fio,
+			Contact:      contact,
+			Address:      address,
+			DateRegister: dateRegister,
+			DatePay:      datePay,
+			Checks:       checks,
+			HasGeo:       true,
+			Latitude:     *lat,
+			Longitude:    *lon,
+			Status:       status,
+			StatusIcon:   statusIcon,
+		}
+
+		orders = append(orders, order)
+	}
+
+	return orders
+}
+
+// NEW: Helper function to parse geo coordinates from location string
+func (h *Handler) parseGeoCoordinates(location string) (*float64, *float64) {
+	if location == "" {
+		return nil, nil
+	}
+
+	// Try different coordinate formats
+	// Format 1: "lat,lon"
+	if strings.Contains(location, ",") {
+		parts := strings.Split(location, ",")
+		if len(parts) >= 2 {
+			lat, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+			lon, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			if err1 == nil && err2 == nil {
+				// Validate coordinate ranges
+				if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+					return &lat, &lon
+				}
+			}
+		}
+	}
+
+	// Format 2: "latitude: 43.2, longitude: 76.8"
+	if strings.Contains(location, "latitude:") && strings.Contains(location, "longitude:") {
+		latStart := strings.Index(location, "latitude:") + 9
+		lonStart := strings.Index(location, "longitude:") + 10
+
+		latEnd := strings.Index(location[latStart:], ",")
+		if latEnd == -1 {
+			latEnd = len(location) - latStart
+		}
+
+		lonEnd := len(location) - lonStart
+		if commaIndex := strings.Index(location[lonStart:], ","); commaIndex != -1 {
+			lonEnd = commaIndex
+		}
+
+		latStr := strings.TrimSpace(location[latStart : latStart+latEnd])
+		lonStr := strings.TrimSpace(location[lonStart : lonStart+lonEnd])
+
+		lat, err1 := strconv.ParseFloat(latStr, 64)
+		lon, err2 := strconv.ParseFloat(lonStr, 64)
+		if err1 == nil && err2 == nil {
+			if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+				return &lat, &lon
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+// Enhanced AdminDashboardHandler with COMPREHENSIVE ORDERS DATA for MAP DISPLAY
 func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -899,6 +1118,8 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	h.logger.Info("🔄 Processing admin dashboard request...")
 
 	// Get REAL total counts from database
 	totalUsers := h.repo.GetTotalUsers(h.ctx)
@@ -975,6 +1196,28 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// Get ALL geo data for comprehensive map display
+	allGeoData, err := h.repo.GetAllGeoEntries(h.ctx)
+	if err != nil {
+		h.logger.Error("Failed to get all geo entries", zap.Error(err))
+		allGeoData = []domain.GeoEntry{}
+	}
+
+	// Create a map of client data for quick lookup
+	clientsMap := make(map[int64]repository.AdminClientEntry)
+	for _, client := range adminClientData {
+		clientsMap[client.UserID] = client
+	}
+
+	// NEW: Create comprehensive orders data for map display from ALL geo entries
+	ordersData := h.convertAllGeoToOrderDataForMap(allGeoData, clientsMap)
+
+	h.logger.Info("📍 COMPREHENSIVE Orders data prepared for map display",
+		zap.Int("total_admin_clients", len(adminClientData)),
+		zap.Int("total_geo_entries", len(allGeoData)),
+		zap.Int("orders_for_map", len(ordersData)),
+		zap.Int("clients_with_geo_count", clientsWithGeo))
+
 	// Get REAL lotto data
 	lottoData, err := h.repo.GetRecentLotoEntries(h.ctx, 50)
 	if err != nil {
@@ -982,7 +1225,7 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 		lottoData = []domain.LotoEntry{}
 	}
 
-	// Get REAL geo data
+	// Get REAL geo data (limited for table display)
 	geoData, err := h.repo.GetRecentGeoEntries(h.ctx, 50)
 	if err != nil {
 		h.logger.Error("Failed to get recent geo entries", zap.Error(err))
@@ -996,17 +1239,18 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 		heatmapData = []map[string]interface{}{}
 	}
 
-	h.logger.Info("Dashboard data prepared with REAL data from database",
+	h.logger.Info("✅ Dashboard data prepared with COMPREHENSIVE REAL data from database",
 		zap.Int("total_users", totalUsers),
 		zap.Int("total_clients", totalClients),
 		zap.Int("clients_with_geo", clientsWithGeo),
 		zap.Int("total_geo", totalGeo),
+		zap.Int("orders_for_map", len(ordersData)),
 		zap.Int("heatmap_points", len(heatmapData)),
 		zap.Int("client_data_count", len(clientData)),
 		zap.Int("lotto_data_count", len(lottoData)),
 		zap.Int("geo_data_count", len(geoData)))
 
-	// Prepare response with REAL data from database
+	// Prepare response with COMPREHENSIVE REAL data from database + ALL ORDERS DATA
 	response := EnhancedDashboardResponse{
 		Success:        true,
 		TotalUsers:     totalUsers,
@@ -1020,6 +1264,7 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 		ClientData:     clientData,
 		LottoData:      lottoData,
 		GeoData:        geoData,
+		OrdersData:     ordersData, // COMPREHENSIVE: This includes ALL geo entries!
 		HeatmapData:    heatmapData,
 	}
 
