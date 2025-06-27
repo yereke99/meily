@@ -6,6 +6,13 @@ import (
 	"database/sql"
 )
 
+type PdfResult struct {
+	Total       int
+	ActualPrice int
+	Bin         string
+	Qr          string
+}
+
 type UserState struct {
 	State         string `json:"state"`
 	BroadCastType string `json:"broadcast_type"`

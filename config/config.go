@@ -17,6 +17,7 @@ type Config struct {
 	StartVideoId    string `json:"start_video_id"`
 	Cost            int    `json:"cost"`
 	BotUsername     string `json:"bot_username"`
+	Bin             string `json:"bin"`
 }
 
 // NewConfig creates and returns a new configuration instance
@@ -32,6 +33,7 @@ func NewConfig() (*Config, error) {
 		StartVideoId:    "",
 		Cost:            18900,
 		BotUsername:     "meilly_cosmetics_bot",
+		Bin:             "870304301209",
 	}
 
 	// Override with environment variables if set

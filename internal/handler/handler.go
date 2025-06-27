@@ -442,12 +442,28 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		h.logger.Warn("Failed to read PDF file", zap.Error(err))
 	}
 
-	fmt.Println(result[0])
-
 	state, err := h.redisRepo.GetUserState(ctx, userID)
 	if err != nil {
 		h.logger.Error("Failed to get user state from Redis", zap.Error(err))
 	}
+
+	priceInt, err := service.ParsePrice(result[3])
+	pdf := domain.PdfResult{
+		Total:       state.Count,
+		ActualPrice: priceInt,
+		Qr:          result[6],
+		Bin:         result[10],
+	}
+
+	if err := service.Validator(h.cfg, pdf); err != nil {
+		h.logger.Error("Failed to validate PDF file", zap.Error(err))
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: userID,
+			Text:   "Дұрыс емес pdf file, қайталап көріңіз",
+		})
+		return
+	}
+
 	if state != nil {
 		state.IsPaid = true
 		state.State = stateContact
