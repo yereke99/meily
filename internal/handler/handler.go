@@ -630,12 +630,16 @@ func (h *Handler) ShareContactCallbackHandler(ctx context.Context, b *bot.Bot, u
 		h.logger.Warn("Failed to insert client", zap.Error(err))
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendVideo(ctx, &bot.SendVideoParams{
 		ChatID: update.Message.Chat.ID,
-		Text: "✅ Контактіңіз сәтті алынды! 😊\n" +
+		Video: &models.InputFileString{
+			Data: h.cfg.InstructorVideoId,
+		},
+		Caption: "✅ Контактіңіз сәтті алынды! 😊\n" +
 			"Косметикалық жинақты қай мекен-жайға жеткізу керек екенін көрсетіңіз. 🚚\n" +
-			"⤵️ Мекен-жайыңызды енгізу үшін батырманы басыңыз👇",
-		ReplyMarkup: kb,
+			"⤵️ Мекен-жайыңызды енгізу үшін батырманы басыңыз👇\nТолығырақ 📹 видео инструкцияда",
+		ReplyMarkup:    kb,
+		ProtectContent: true,
 	})
 	if err != nil {
 		h.logger.Warn("Failed to send confirmation message", zap.Error(err))
