@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"meily/config"
 	"meily/internal/domain"
 	"meily/internal/repository"
@@ -131,6 +132,7 @@ type ClientEntryWithGeo struct {
 }
 
 func NewHandler(cfg *config.Config, zapLogger *zap.Logger, ctx context.Context, repo *repository.UserRepository, redisRepo *repository.RedisRepository) *Handler {
+	rand.Seed(time.Now().UnixNano())
 	return &Handler{
 		cfg:       cfg,
 		logger:    zapLogger,
@@ -176,6 +178,136 @@ func (h *Handler) getOrCreateUserState(ctx context.Context, userID int64) *domai
 	}
 
 	return state
+}
+
+func (h *Handler) JustPaid(ctx context.Context, b *bot.Bot, update *models.Update) {
+	doc := update.Message.Document
+	if !strings.EqualFold(filepath.Ext(doc.FileName), ".pdf") {
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "❌ Қате! Тек қана PDF форматындағы файлдарды қабылдаймыз.",
+		})
+		return
+	}
+
+	userID := update.Message.From.ID
+	fileInfo, err := b.GetFile(ctx, &bot.GetFileParams{FileID: doc.FileID})
+	if err != nil {
+		h.logger.Error("Failed to get file info", zap.Error(err))
+		return
+	}
+	fileUrl := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", h.cfg.Token, fileInfo.FilePath)
+	resp, err := http.Get(fileUrl)
+	if err != nil {
+		h.logger.Error("Failed to download file via HTTP", zap.Error(err))
+		return
+	}
+	defer resp.Body.Close()
+
+	saveDir := h.cfg.SavePaymentsDir
+	if err := os.MkdirAll(saveDir, 0755); err != nil {
+		h.logger.Error("Failed to create payments directory", zap.Error(err))
+		return
+	}
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	fileName := fmt.Sprintf("%d_%s.pdf", userID, timestamp)
+	savePath := filepath.Join(saveDir, fileName)
+
+	outFile, err := os.Create(savePath)
+	if err != nil {
+		h.logger.Error("Failed to create file on disk", zap.Error(err))
+		return
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, resp.Body); err != nil {
+		h.logger.Error("Failed to save PDF file", zap.Error(err))
+		return
+	}
+	h.logger.Info("PDF file saved", zap.String("path", savePath))
+
+	result, err := service.ReadPDF(savePath)
+	if err != nil {
+		h.logger.Error("Failed to read PDF file", zap.Error(err))
+		return
+	}
+	fmt.Println(result)
+	h.logger.Info("PDF file read", zap.Any("result", result))
+
+	actualPrice, err := service.ParsePrice(result[2])
+	if err != nil {
+		h.logger.Error("error in parse price", zap.Error(err))
+		return
+	}
+	fmt.Println(actualPrice)
+	total := actualPrice / h.cfg.Cost
+	totalLoto := total * 3
+	tickets := make([]int, 0, totalLoto)
+
+	h.logger.Info("price", zap.Any("actualPrice", actualPrice))
+	pdfData := domain.PdfResult{
+		Total:       total,
+		ActualPrice: actualPrice,
+		Bin:         h.cfg.Bin,
+		Qr:          result[3],
+	}
+	if err := service.Validator(h.cfg, pdfData); err != nil {
+		h.logger.Error("error in validator", zap.Error(err))
+		return
+	}
+
+	newState := &domain.UserState{
+		State:  stateContact,
+		Count:  total,
+		IsPaid: true,
+	}
+	if err := h.redisRepo.SaveUserState(ctx, userID, newState); err != nil {
+		h.logger.Error("error in save newState to redis", zap.Error(err))
+		return
+	}
+
+	for i := 0; i < totalLoto; i++ {
+		lotoId := rand.Intn(90000000) + 10000000
+		if err := h.repo.InsertLoto(ctx, domain.LotoEntry{
+			UserID:  userID,
+			LotoID:  lotoId,
+			QR:      result[3],
+			Receipt: savePath,
+			DatePay: time.Now().Format("2006-01-02 15:04:05"),
+		}); err != nil {
+			h.logger.Error("error in insert loto", zap.Error(err))
+			return
+		}
+		tickets = append(tickets, lotoId)
+	}
+
+	kb := models.ReplyKeyboardMarkup{
+		Keyboard: [][]models.KeyboardButton{
+			{
+				{
+					Text:           "📲 Контактіні бөлісу",
+					RequestContact: true,
+				},
+			},
+		},
+		ResizeKeyboard:  true,
+		OneTimeKeyboard: true,
+	}
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("🎟️ Сізге берілген %d билеті:\n\n", len(tickets)))
+	for i := 0; i < len(tickets); i++ {
+		sb.WriteString(fmt.Sprintf("•%08d\n", tickets[i]))
+	}
+	text := sb.String()
+	// Чекті сәтті қабылдады
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      update.Message.Chat.ID,
+		Text:        "✅ Чек PDF сәтті қабылданды!\nCізбен кері байланысқа шығу үшін төмендегі\n📲 Контактіні бөлісу түймесін 👇 міндетті басыңыз.\n\n" + text,
+		ReplyMarkup: kb,
+	})
+	if err != nil {
+		h.logger.Warn("Failed to send confirmation message", zap.Error(err))
+	}
 }
 
 func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -226,6 +358,13 @@ func (h *Handler) DefaultHandler(ctx context.Context, b *bot.Bot, update *models
 	}
 
 	userState := h.getOrCreateUserState(ctx, userID)
+	if update.Message.Document != nil {
+		if userState.State != statePaid && userState.State != stateContact {
+			h.logger.Info("Document message", zap.String("user_id", strconv.FormatInt(update.Message.From.ID, 10)))
+			h.JustPaid(ctx, b, update)
+			return
+		}
+	}
 
 	if update.CallbackQuery != nil {
 		switch userState.State {

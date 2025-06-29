@@ -47,13 +47,13 @@ type LotoEntry struct {
 	ID      int64          `json:"id" db:"id"`
 	UserID  int64          `json:"userID" db:"id_user"`
 	LotoID  int            `json:"lotoID" db:"id_loto"`
-	QR      sql.NullString `json:"qr" db:"qr"`
+	QR      string         `json:"qr" db:"qr"`
 	WhoPaid sql.NullString `json:"whoPaid" db:"who_paid"`
-	Receipt sql.NullString `json:"receipt" db:"receipt"`
+	Receipt string         `json:"receipt" db:"receipt"`
 	Fio     sql.NullString `json:"fio" db:"fio"`
 	Contact sql.NullString `json:"contact" db:"contact"`
 	Address sql.NullString `json:"address" db:"address"`
-	DatePay sql.NullString `json:"datePay" db:"dataPay"`
+	DatePay string         `json:"datePay" db:"dataPay"`
 }
 
 // GeoEntry represents geolocation data in the geo table

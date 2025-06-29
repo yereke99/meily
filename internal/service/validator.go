@@ -2,16 +2,21 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"meily/config"
 	"meily/internal/domain"
+	"regexp"
 	"strconv"
-	"strings"
 )
 
-func ParsePrice(priceStr string) (int, error) {
-	s := strings.ReplaceAll(priceStr, "₸", "")
-	s = strings.ReplaceAll(s, "", "")
-	return strconv.Atoi(s)
+func ParsePrice(raw string) (int, error) {
+	// Убираем все, кроме цифр
+	re := regexp.MustCompile(`\D+`)
+	digits := re.ReplaceAllString(raw, "")
+	if digits == "" {
+		return 0, fmt.Errorf("no digits found in price %q", raw)
+	}
+	return strconv.Atoi(digits)
 }
 
 func Validator(cfg *config.Config, pdfData domain.PdfResult) error {
