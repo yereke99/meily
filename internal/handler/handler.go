@@ -307,6 +307,36 @@ func (h *Handler) JustPaid(ctx context.Context, b *bot.Bot, update *models.Updat
 		return
 	}
 
+	f, errFile := os.Open(savePath)
+	if errFile != nil {
+		h.logger.Error("Failed to open file on disk", zap.Error(errFile))
+	}
+
+	// Enhanced message with emojis and better formatting
+	msgText := fmt.Sprintf(
+		"✅ Сәтті төлем жасалды! 🎉\n\n"+
+			"👤 UserId: %d\n"+
+			"🧴 Косметика саны: %d\n"+
+			"💰 Төлем суммасы: %d ₸\n"+
+			"📅 Уақыт: %s\n"+
+			"📄 Чек файлы жоғарыда 👆",
+		userID,
+		total,
+		actualPrice,
+		time.Now().Format("2006-01-02 15:04:05"))
+
+	_, errSendToAdmin := b.SendDocument(ctx, &bot.SendDocumentParams{
+		ChatID: h.cfg.AdminID,
+		Document: &models.InputFileUpload{
+			Filename: fileName,
+			Data:     f,
+		},
+		Caption: msgText,
+	})
+	if errSendToAdmin != nil {
+		h.logger.Error("Failed to send file to admin", zap.Error(errSendToAdmin))
+	}
+
 	for i := 0; i < totalLoto; i++ {
 		lotoId := rand.Intn(90000000) + 10000000
 		if err := h.repo.InsertLoto(ctx, domain.LotoEntry{
@@ -619,8 +649,8 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		return
 	}
 	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("%d_%s.pdf", update.Message.From.ID, timestamp)
-	savePath := filepath.Join(saveDir, filename)
+	fileName := fmt.Sprintf("%d_%s.pdf", update.Message.From.ID, timestamp)
+	savePath := filepath.Join(saveDir, fileName)
 
 	outFile, err := os.Create(savePath)
 	if err != nil {
@@ -757,6 +787,36 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 			return
 		}
 		tickets = append(tickets, lotoId)
+	}
+
+	f, errFile := os.Open(savePath)
+	if errFile != nil {
+		h.logger.Error("Failed to open file on disk", zap.Error(errFile))
+	}
+
+	// Enhanced message with emojis and better formatting
+	msgText := fmt.Sprintf(
+		"✅ Сәтті төлем жасалды! 🎉\n\n"+
+			"👤 UserId: %d\n"+
+			"🧴 Косметика саны: %d\n"+
+			"💰 Төлем суммасы: %d ₸\n"+
+			"📅 Уақыт: %s\n"+
+			"📄 Чек файлы жоғарыда 👆",
+		userID,
+		state.Count,
+		actualPrice,
+		time.Now().Format("2006-01-02 15:04:05"))
+
+	_, errSendToAdmin := b.SendDocument(ctx, &bot.SendDocumentParams{
+		ChatID: h.cfg.AdminID,
+		Document: &models.InputFileUpload{
+			Filename: fileName,
+			Data:     f,
+		},
+		Caption: msgText,
+	})
+	if errSendToAdmin != nil {
+		h.logger.Error("Failed to send file to admin", zap.Error(errSendToAdmin))
 	}
 
 	kb := models.ReplyKeyboardMarkup{
