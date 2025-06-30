@@ -553,6 +553,15 @@ func (r *UserRepository) IsClientUnique(ctx context.Context, userID int64) (bool
 	return cnt == 0, nil
 }
 
+func (r *UserRepository) IsQrUnique(ctx context.Context, qrCode string) (bool, error) {
+	const q = `SELECT COUNT(1) FROM loto WHERE qr = ?;`
+	var cnt int
+	if err := r.db.QueryRowContext(ctx, q, qrCode).Scan(&cnt); err != nil {
+		return false, err
+	}
+	return cnt == 0, nil
+}
+
 // IsClientPaid проверяет, оплачен ли клиент
 func (r *UserRepository) IsClientPaid(ctx context.Context, userID int64) (bool, error) {
 	const q = `SELECT checks FROM client WHERE id_user = ?;`

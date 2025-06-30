@@ -231,9 +231,27 @@ func (h *Handler) JustPaid(ctx context.Context, b *bot.Bot, update *models.Updat
 		h.logger.Error("Failed to read PDF file", zap.Error(err))
 		return
 	}
-	fmt.Println(result)
-	h.logger.Info("PDF file read", zap.Any("result", result))
+	if len(result) < 4 {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "Дұрыс емес форматтағы чек!",
+		})
+		return
+	}
 
+	h.logger.Info("PDF file read", zap.Any("result", result))
+	ok, err := h.repo.IsQrUnique(ctx, result[3])
+	if err != nil {
+		h.logger.Error("error in check unique", zap.Error(err))
+		return
+	}
+	if !ok {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "Чек төленіп қойылған",
+		})
+		return
+	}
 	actualPrice, err := service.ParsePrice(result[2])
 	if err != nil {
 		h.logger.Error("error in parse price", zap.Error(err))
@@ -251,6 +269,7 @@ func (h *Handler) JustPaid(ctx context.Context, b *bot.Bot, update *models.Updat
 		Bin:         h.cfg.Bin,
 		Qr:          result[3],
 	}
+
 	if err := service.Validator(h.cfg, pdfData); err != nil {
 		h.logger.Error("error in validator", zap.Error(err))
 		return
@@ -549,7 +568,7 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	if !strings.EqualFold(filepath.Ext(doc.FileName), ".pdf") {
 		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   "❌ Қате! Тек қана PDF форматындағы файлдарды қабылдаймыз.",
+			Text:   "❌ Қате! Тек қана PDF 📄 форматындағы файлдарды қабылдаймыз.",
 		})
 		return
 	}
@@ -598,33 +617,83 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	if err != nil {
 		h.logger.Warn("Failed to read PDF file", zap.Error(err))
 	}
-
-	state, err := h.redisRepo.GetUserState(ctx, userID)
+	if len(result) < 4 {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "❌ Дұрыс емес форматтағы чек! 📄 Қайталап көріңіз.",
+		})
+		return
+	}
+	h.logger.Info("PDF file read", zap.Any("result", result))
+	ok, err := h.repo.IsQrUnique(ctx, result[3])
 	if err != nil {
-		h.logger.Error("Failed to get user state from Redis", zap.Error(err))
+		h.logger.Error("error in check unique", zap.Error(err))
+		return
 	}
-
-	priceInt, errPdf := service.ParsePrice(result[3])
-	pdf := domain.PdfResult{
-		Total:       state.Count,
-		ActualPrice: priceInt,
-		Qr:          result[3],
-		Bin:         h.cfg.Bin,
+	if !ok {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "⚠️ Бұл чек бұрын төленіп қойылған! 💳 ✅",
+		})
+		return
 	}
-	if errPdf != nil {
+	actualPrice, err := service.ParsePrice(result[2])
+	if err != nil {
 		h.logger.Error("Failed to parse price from PDF file", zap.Error(err))
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: userID,
-			Text:   "Дұрыс емес pdf file, қайталап көріңіз",
+			Text:   "❌ Дұрыс емес PDF файл! 📄 Қайталап көріңіз.",
 		})
+		return
+	}
+	state, err := h.redisRepo.GetUserState(ctx, userID)
+	if err != nil {
+		h.logger.Error("Failed to get user state from Redis", zap.Error(err))
+		return
+	}
+	rows := make([][]models.InlineKeyboardButton, 6)
+	for i := 0; i < 6; i++ {
+		row := make([]models.InlineKeyboardButton, 5)
+		for j := 0; j < 5; j++ {
+			num := i*5 + j + 1
+			row[j] = models.InlineKeyboardButton{
+				Text:         strconv.Itoa(num),
+				CallbackData: fmt.Sprintf("count_%d", num),
+			}
+		}
+		rows[i] = row
+	}
+
+	btn := &models.InlineKeyboardMarkup{
+		InlineKeyboard: rows,
+	}
+	totalPrice := state.Count * h.cfg.Cost
+	predictedCount := actualPrice / h.cfg.Cost
+	textPrice := fmt.Sprintf("⚠️ Дұрыс емес сумма! 💰\n\n🔄 Көрсетілген сумаға сәйкес төлеңіз!\n📦 Немесе жиынтық суммасына сәйкес жиынтық санын түймелер таңдаңыз.\n\nСіздң жиынтық саны: %d", predictedCount)
+	if totalPrice != actualPrice {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:      userID,
+			Text:        textPrice,
+			ReplyMarkup: btn,
+		})
+		return
+	}
+	totalLoto := state.Count * 3
+
+	pdf := domain.PdfResult{
+		Total:       state.Count,
+		ActualPrice: actualPrice,
+		Qr:          result[3],
+		Bin:         h.cfg.Bin,
 	}
 
 	if err := service.Validator(h.cfg, pdf); err != nil {
 		h.logger.Error("Failed to validate PDF file", zap.Error(err))
 		b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: userID,
-			Text:   "Дұрыс емес pdf file, қайталап көріңіз",
+			Text:   "❌ Дұрыс емес PDF файл! 📄 Қайталап көріңіз.",
 		})
+		return
 	}
 
 	if state != nil {
@@ -633,6 +702,22 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		if err := h.redisRepo.SaveUserState(ctx, userID, state); err != nil {
 			h.logger.Error("Failed to save user state to Redis", zap.Error(err))
 		}
+	}
+
+	tickets := make([]int, 0, totalLoto)
+	for i := 0; i < totalLoto; i++ {
+		lotoId := rand.Intn(90000000) + 10000000
+		if err := h.repo.InsertLoto(ctx, domain.LotoEntry{
+			UserID:  userID,
+			LotoID:  lotoId,
+			QR:      result[3],
+			Receipt: savePath,
+			DatePay: time.Now().Format("2006-01-02 15:04:05"),
+		}); err != nil {
+			h.logger.Error("error in insert loto", zap.Error(err))
+			return
+		}
+		tickets = append(tickets, lotoId)
 	}
 
 	kb := models.ReplyKeyboardMarkup{
@@ -647,10 +732,22 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 		ResizeKeyboard:  true,
 		OneTimeKeyboard: true,
 	}
-	// Подтверждаем получение чека
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("🎟️ Сізге берілген %d билеті:\n\n", len(tickets)))
+	for i := 0; i < len(tickets); i++ {
+		sb.WriteString(fmt.Sprintf("🎫 %08d\n", tickets[i]))
+	}
+	text := sb.String()
+
+	// Enhanced success message with more emojis
+	successMessage := "✅ Чек PDF сәтті қабылданды! 🎉\n\n" +
+		"📞 Сізбен кері байланысқа шығу үшін төмендегі\n" +
+		"📲 Контактіні бөлісу түймесін 👇 міндетті басыңыз.\n\n" +
+		"🎊 Сіз лотереяға қатысасыз! 🍀\n\n" + text
+
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:      update.Message.Chat.ID,
-		Text:        "✅ Чек PDF сәтті қабылданды! Cізбен кері байланысқа шығу үшін контактіні бөлісу түймесін басыңыз.",
+		Text:        successMessage,
 		ReplyMarkup: kb,
 	})
 	if err != nil {
