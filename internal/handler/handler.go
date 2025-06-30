@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -282,6 +283,27 @@ func (h *Handler) JustPaid(ctx context.Context, b *bot.Bot, update *models.Updat
 	}
 	if err := h.redisRepo.SaveUserState(ctx, userID, newState); err != nil {
 		h.logger.Error("error in save newState to redis", zap.Error(err))
+
+		var errorMessage string
+		if errors.Is(err, service.ErrWrongBin) {
+			// Specific message for wrong BIN in Kazakh with emojis
+			errorMessage = "❌ Қате банк картасы! 💳\n\n" +
+				"🏦 Тек біздің серіктес банк картасымен төлем жасауға болады.\n" +
+				"📋 Дұрыс банк картасын пайдаланып қайталап көріңіз!"
+		} else if errors.Is(err, service.ErrWrongPrice) {
+			// Message for wrong price
+			errorMessage = "❌ Дұрыс емес сумма! 💰\n\n" +
+				"🔍 Төлем сомасы сәйкес келмейді.\n" +
+				"📄 Чекті қайталап тексеріп көріңіз!"
+		} else {
+			// Generic error message
+			errorMessage = "❌ Дұрыс емес PDF файл! 📄\n\n" +
+				"🔄 Қайталап көріңіз немесе жаңа чек жүктеңіз."
+		}
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: userID,
+			Text:   errorMessage,
+		})
 		return
 	}
 
@@ -688,10 +710,27 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	}
 
 	if err := service.Validator(h.cfg, pdf); err != nil {
-		h.logger.Error("Failed to validate PDF file", zap.Error(err))
-		b.SendMessage(ctx, &bot.SendMessageParams{
+		h.logger.Error("error in save newState to redis", zap.Error(err))
+
+		var errorMessage string
+		if errors.Is(err, service.ErrWrongBin) {
+			// Specific message for wrong BIN in Kazakh with emojis
+			errorMessage = "❌ Қате банк картасы! 💳\n\n" +
+				"🏦 Тек біздің серіктес банк картасымен төлем жасауға болады.\n" +
+				"📋 Дұрыс банк картасын пайдаланып қайталап көріңіз!"
+		} else if errors.Is(err, service.ErrWrongPrice) {
+			// Message for wrong price
+			errorMessage = "❌ Дұрыс емес сумма! 💰\n\n" +
+				"🔍 Төлем сомасы сәйкес келмейді.\n" +
+				"📄 Чекті қайталап тексеріп көріңіз!"
+		} else {
+			// Generic error message
+			errorMessage = "❌ Дұрыс емес PDF файл! 📄\n\n" +
+				"🔄 Қайталап көріңіз немесе жаңа чек жүктеңіз."
+		}
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: userID,
-			Text:   "❌ Дұрыс емес PDF файл! 📄 Қайталап көріңіз.",
+			Text:   errorMessage,
 		})
 		return
 	}
