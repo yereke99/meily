@@ -24,7 +24,7 @@ type Config struct {
 // NewConfig creates and returns a new configuration instance
 func NewConfig() (*Config, error) {
 	cfg := &Config{
-		Port:              ":8080",
+		Port:              ":8081",
 		Token:             "7236771363:AAHC7J1nUx1o_OmQYhk1PVl2eRSwp-zouo4",
 		BaseURL:           "https://ccc8-89-219-13-135.ngrok-free.app", // Update this with your actual domain
 		DBName:            "meily.db",
