@@ -608,8 +608,8 @@ func (h *Handler) PaidHandler(ctx context.Context, b *bot.Bot, update *models.Up
 	pdf := domain.PdfResult{
 		Total:       state.Count,
 		ActualPrice: priceInt,
-		Qr:          result[6],
-		Bin:         result[10],
+		Qr:          result[3],
+		Bin:         h.cfg.Bin,
 	}
 	if errPdf != nil {
 		h.logger.Error("Failed to parse price from PDF file", zap.Error(err))
@@ -1223,7 +1223,7 @@ func (h *Handler) parseGeoCoordinates(location string) (*float64, *float64) {
 		}
 	}
 
-	// Format 2: "latitude: 43.2, longitude: 76.8"
+	// Format 2: "latitude: 43.2, longitude:  76.8"
 	if strings.Contains(location, "latitude:") && strings.Contains(location, "longitude:") {
 		latStart := strings.Index(location, "latitude:") + 9
 		lonStart := strings.Index(location, "longitude:") + 10
