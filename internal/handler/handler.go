@@ -1129,6 +1129,10 @@ func (h *Handler) ClientSaveHandler(w http.ResponseWriter, r *http.Request) {
 	latitudeStr := r.FormValue("latitude")
 	longitudeStr := r.FormValue("longitude")
 
+	h.logger.Info("address", zap.String("address", address))
+	h.logger.Info("latitudeStr", zap.String("latitudeStr", latitudeStr))
+	h.logger.Info("longitudeStr", zap.String("longitudeStr", longitudeStr))
+
 	// Validate required fields
 	if telegramIDStr == "" || fio == "" || contact == "" || address == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -1243,7 +1247,6 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 			zap.Float64("longitude", longitude))
 	}
 
-	// Then send the confirmation message
 	_, err = h.bot.SendMessage(h.ctx, &bot.SendMessageParams{
 		ChatID: telegramID,
 		Text:   combinedText,
@@ -1251,8 +1254,8 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 			InlineKeyboard: [][]models.InlineKeyboardButton{
 				{
 					{
-						Text: "💄 Meily Cosmetics",
-						URL:  fmt.Sprintf("https://t.me/%s", "meilly_cosmetics_bot"),
+						Text: "✏️ Енгізілген деректерді өзгерту.(Егер қате болса)",
+						URL:  "https://meily.kz/welcome",
 					},
 				},
 			},
