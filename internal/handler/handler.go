@@ -1259,7 +1259,7 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 				{
 					{
 						Text: "✏️ Енгізілген деректерді өзгерту.(Егер қате болса)",
-						URL:  "https://meily.kz/welcome",
+						URL:  "https://t.me/meilly_cosmetics_bot/MeiLyCosmetics",
 					},
 				},
 			},
