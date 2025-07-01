@@ -871,9 +871,10 @@
     let locationPermissionGranted = false;
     let watchId = null;
     let locationInterval = null;
-    let telegramId = null; // Consolidated declaration
+    let telegramId = null;
     let telegramUser = null;
     let selectedCoords = null;
+    let addressSelectedFromMap = false; // Track if address was selected from map
 
     // Set Telegram viewport height
     function updateViewportHeight() {
@@ -966,14 +967,11 @@
       });
     }
 
-    // Theme management - More sophisticated detection
+    // Theme management
     function detectSystemTheme() {
-      // Check if user prefers dark mode
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
       }
-      
-      // Fallback to time-based detection
       const hour = new Date().getHours();
       return (hour >= 19 || hour < 7) ? 'dark' : 'light';
     }
@@ -993,18 +991,7 @@
       });
     }
 
-    // Also check time-based changes every minute
-    setInterval(() => {
-      if (!window.matchMedia || !window.matchMedia('(prefers-color-scheme: dark)').matches && !window.matchMedia('(prefers-color-scheme: light)').matches) {
-        const newTheme = detectSystemTheme();
-        if (newTheme !== currentTheme) {
-          currentTheme = newTheme;
-          applyTheme(currentTheme);
-        }
-      }
-    }, 60000);
-
-    // Telegram WebApp initialization - Enhanced for static Mini App URL
+    // Telegram WebApp initialization
     function initTelegramWebApp() {
       console.log('🔍 Initializing Telegram WebApp...');
       
@@ -1013,21 +1000,16 @@
         return false;
       }
 
-      console.log('📱 Telegram WebApp available');
-      
       try {
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
         
-        // Method 1: Try initDataUnsafe (most reliable)
+        // Get user data from Telegram
         if (Telegram.WebApp.initDataUnsafe?.user) {
           telegramUser = Telegram.WebApp.initDataUnsafe.user;
           telegramId = telegramUser.id;
           console.log('✅ Got user from initDataUnsafe:', telegramUser);
-        }
-        // Method 2: Try initData parsing (fallback)
-        else if (Telegram.WebApp.initData) {
-          console.log('🔄 Parsing initData:', Telegram.WebApp.initData);
+        } else if (Telegram.WebApp.initData) {
           try {
             const urlParams = new URLSearchParams(Telegram.WebApp.initData);
             const userParam = urlParams.get('user');
@@ -1040,42 +1022,28 @@
             console.error('❌ Error parsing initData:', e);
           }
         }
-        // Method 3: Try WebAppUser (another fallback)
-        else if (Telegram.WebApp.WebAppUser) {
-          telegramUser = Telegram.WebApp.WebAppUser;
-          telegramId = telegramUser.id;
-          console.log('✅ Got user from WebAppUser:', telegramUser);
-        }
 
         if (telegramId) {
           document.getElementById('telegram_id').value = telegramId;
           console.log(`🎯 Final Telegram ID: ${telegramId}`);
         } else {
           console.warn('⚠️ Could not extract user ID from Telegram WebApp');
-          console.log('Debug info:', {
-            initDataUnsafe: Telegram.WebApp.initDataUnsafe,
-            initData: Telegram.WebApp.initData,
-            WebAppUser: Telegram.WebApp.WebAppUser
-          });
         }
 
-        // Theme from Telegram
+        // Apply Telegram theme
         if (Telegram.WebApp.colorScheme) {
           currentTheme = Telegram.WebApp.colorScheme;
           applyTheme(currentTheme);
-          console.log('🎨 Applied Telegram theme:', currentTheme);
         }
 
         Telegram.WebApp.onEvent('themeChanged', function() {
           if (Telegram.WebApp.colorScheme) {
             currentTheme = Telegram.WebApp.colorScheme;
             applyTheme(currentTheme);
-            console.log('🎨 Theme changed to:', currentTheme);
           }
         });
 
         return true;
-
       } catch (error) {
         console.error('❌ Error initializing Telegram WebApp:', error);
         return false;
@@ -1099,20 +1067,22 @@
         navigator.geolocation.getCurrentPosition(
           (position) => {
             locationPermissionGranted = true;
-            currentUserLocation = [position.coords.longitude, position.coords.latitude]; // Yandex 3.0 uses [lon, lat]
+            currentUserLocation = [position.coords.longitude, position.coords.latitude];
             updateLocationStatus('active', translations[currentLang].locationActive);
             startRealtimeLocationTracking();
             
-            // Update coordinates in form
-            document.getElementById('latitude').value = position.coords.latitude;
-            document.getElementById('longitude').value = position.coords.longitude;
-            
-            // Get address from coordinates and update form
-            getAddressFromCoordinates(currentUserLocation).then(address => {
-              if (address) {
-                document.getElementById('address').value = address;
-              }
-            });
+            // Only update coordinates if address was NOT selected from map
+            if (!addressSelectedFromMap) {
+              document.getElementById('latitude').value = position.coords.latitude;
+              document.getElementById('longitude').value = position.coords.longitude;
+              
+              // Get address from coordinates and update form
+              getAddressFromCoordinates(currentUserLocation).then(address => {
+                if (address && !addressSelectedFromMap) {
+                  document.getElementById('address').value = address;
+                }
+              });
+            }
 
             // Update map and marker
             if (clientMap) {
@@ -1158,7 +1128,6 @@
         statusEl.className = `location-status ${status}`;
         textEl.textContent = message;
         
-        // Auto-hide after 5 seconds for success messages
         if (status === 'active') {
           setTimeout(() => {
             if (statusEl.style.display !== 'none') {
@@ -1174,34 +1143,28 @@
 
       console.log('🌍 Starting real-time location tracking...');
 
-      // Start watchPosition for continuous tracking
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const newCoords = [position.coords.longitude, position.coords.latitude];
           const accuracy = position.coords.accuracy;
           
-          console.log('📍 Location update:', {
-            coords: newCoords,
-            accuracy: accuracy
-          });
-          
           currentUserLocation = newCoords;
           
-          // Update coordinates in form
-          document.getElementById('latitude').value = position.coords.latitude;
-          document.getElementById('longitude').value = position.coords.longitude;
+          // Only update coordinates if address was NOT selected from map
+          if (!addressSelectedFromMap) {
+            document.getElementById('latitude').value = position.coords.latitude;
+            document.getElementById('longitude').value = position.coords.longitude;
+          }
           
           // Update marker on map
           if (userLocationMarker && clientMap) {
             try {
               userLocationMarker.update({ coordinates: newCoords });
             } catch (error) {
-              console.log('Recreating user location marker...');
               addUserLocationMarker(newCoords);
             }
           }
           
-          // Update status with accuracy
           if (accuracy <= 100) {
             updateLocationStatus('active', `${translations[currentLang].locationActive} (±${Math.round(accuracy)}m)`);
           }
@@ -1216,43 +1179,6 @@
           maximumAge: 5000
         }
       );
-
-      // Also update location every 3 seconds for higher accuracy
-      locationInterval = setInterval(() => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const newCoords = [position.coords.longitude, position.coords.latitude];
-            const accuracy = position.coords.accuracy;
-            
-            if (accuracy <= 50) { // Only use high accuracy positions
-              currentUserLocation = newCoords;
-              
-              // Update coordinates in form
-              document.getElementById('latitude').value = position.coords.latitude;
-              document.getElementById('longitude').value = position.coords.longitude;
-              
-              // Update marker
-              if (userLocationMarker && clientMap) {
-                try {
-                  userLocationMarker.update({ coordinates: newCoords });
-                } catch (error) {
-                  addUserLocationMarker(newCoords);
-                }
-              }
-              
-              updateLocationStatus('active', `${translations[currentLang].locationActive} (±${Math.round(accuracy)}m)`);
-            }
-          },
-          (error) => {
-            console.error('Interval location error:', error);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 1000
-          }
-        );
-      }, 3000);
     }
 
     // Yandex Maps 3.0 initialization
@@ -1261,7 +1187,7 @@
         await ymaps3.ready;
         console.log('🗺️ Initializing Client Map...');
         
-        const {YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker, YMapListener} = ymaps3;
+        const {YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer} = ymaps3;
         
         if (clientMap) {
           clientMap.destroy();
@@ -1285,13 +1211,6 @@
 
         // Add user location marker
         addUserLocationMarker(center);
-
-        // Add map controls behavior
-        setTimeout(() => {
-          if (clientMap && clientMap.container) {
-            clientMap.container.fitToViewport();
-          }
-        }, 500);
 
         console.log('✅ Client Map initialized successfully');
       } catch (error) {
@@ -1330,8 +1249,11 @@
       }
     }
 
+    // FIXED: Using Yandex Geocoding API properly
     async function getAddressFromCoordinates(coordinates) {
       try {
+        console.log('🔍 Getting address for coordinates:', coordinates);
+        
         const response = await fetch(
           `https://geocode-maps.yandex.ru/1.x/?apikey=8a3e4da0-9ef2-4176-9203-e7014c1dba6f&geocode=${coordinates[0]},${coordinates[1]}&format=json&results=1&lang=ru_RU`
         );
@@ -1345,9 +1267,8 @@
         
         if (geoObjects && geoObjects.length > 0) {
           const address = geoObjects[0].GeoObject.metaDataProperty.GeocoderMetaData.text;
-          if (address) {
-            return address;
-          }
+          console.log('✅ Got address from Yandex:', address);
+          return address;
         }
         
         throw new Error('No address found');
@@ -1371,15 +1292,9 @@
         icon.textContent = '⬛';
       }
       
-      // Resize map after animation
       setTimeout(() => {
-        if (clientMap) {
-          try {
-            clientMap.container.fitToViewport();
-          } catch (error) {
-            // Fallback: trigger resize event
-            window.dispatchEvent(new Event('resize'));
-          }
+        if (clientMap && clientMap.container) {
+          clientMap.container.fitToViewport();
         }
       }, 350);
     }
@@ -1403,11 +1318,10 @@
         } else {
           alert(message);
         }
-        updateLocationStatus('error', message);
       }
     }
 
-    // Map selector modal
+    // Map selector modal - FIXED VERSION
     async function openMapSelector() {
       document.getElementById('mapSelectorModal').style.display = 'block';
       
@@ -1466,11 +1380,14 @@
       }, 100);
     }
 
+    // FIXED: Handle map click and get coordinates + address from same location
     async function handleSelectorMapClick(object, event) {
       if (!event.coordinates) return;
 
-      const coords = event.coordinates;
+      const coords = event.coordinates; // [longitude, latitude] from Yandex Maps 3.0
       selectedCoords = coords;
+      
+      console.log('📍 Map click - Selected coords:', coords);
       
       try {
         // Remove existing address marker
@@ -1495,22 +1412,53 @@
         const selectBtn = document.querySelector('.select-address-btn');
         selectBtn.disabled = false;
         
-        // Get address
+        // FIXED: Get address from the SAME coordinates where pin was placed
         const address = await getAddressFromCoordinates(coords);
         selectBtn.textContent = `${translations[currentLang].selectThisAddress}: ${address.substring(0, 50)}...`;
+        
+        console.log('🎯 Pin placed - Address and coords match:', {
+          address: address,
+          coordinates: coords
+        });
         
       } catch (error) {
         console.error('Error handling map click:', error);
       }
     }
 
+    // FIXED: Select address from map with matching coordinates
     function selectCurrentAddress() {
-      if (!selectedCoords) return;
+      if (!selectedCoords) {
+        console.warn('⚠️ No coordinates selected');
+        return;
+      }
 
+      console.log('✅ Selecting address from map with coords:', selectedCoords);
+
+      // FIXED: Set coordinates FIRST, then get address from SAME coordinates
+      addressSelectedFromMap = true;
+      
+      // Update coordinates IMMEDIATELY from the pin location
+      document.getElementById('latitude').value = selectedCoords[1];  // latitude from pin
+      document.getElementById('longitude').value = selectedCoords[0]; // longitude from pin
+      
+      // Then get address from the EXACT SAME coordinates
       getAddressFromCoordinates(selectedCoords).then(address => {
+        // Update address from the same coordinates
         document.getElementById('address').value = address;
-        document.getElementById('latitude').value = selectedCoords[1];
-        document.getElementById('longitude').value = selectedCoords[0];
+        
+        console.log('🎯 Form updated with matching address and coordinates:', {
+          address: address,
+          latitude: selectedCoords[1],
+          longitude: selectedCoords[0],
+          source: 'map_pin'
+        });
+        
+        closeMapSelector();
+      }).catch(error => {
+        console.error('Error getting address:', error);
+        // Fallback: use coordinate string as address
+        document.getElementById('address').value = `${selectedCoords[1].toFixed(6)}, ${selectedCoords[0].toFixed(6)}`;
         closeMapSelector();
       });
     }
@@ -1534,6 +1482,9 @@
       input.addEventListener('input', function(e) {
         clearTimeout(suggestTimeout);
         const query = e.target.value;
+        
+        // Reset map selection flag when user types manually
+        addressSelectedFromMap = false;
         
         if (query.length < 3) {
           document.getElementById(suggestionsId).style.display = 'none';
@@ -1579,10 +1530,19 @@
         div.className = 'suggestion-item';
         div.textContent = name;
         div.onclick = function() {
+          // When user selects from suggestions, use suggestion coordinates
+          addressSelectedFromMap = false;
           document.getElementById('address').value = name;
-          document.getElementById('latitude').value = coords[1];
-          document.getElementById('longitude').value = coords[0];
+          document.getElementById('latitude').value = coords[1];  // latitude
+          document.getElementById('longitude').value = coords[0]; // longitude
           container.style.display = 'none';
+          
+          console.log('📝 Address selected from suggestions:', {
+            address: name,
+            latitude: coords[1],
+            longitude: coords[0],
+            source: 'suggestion'
+          });
         };
         container.appendChild(div);
       });
@@ -1623,11 +1583,10 @@
         if (result.success && result.client) {
           const client = result.client;
           
-          // Fill form with existing data - fix for [object Object] issue
+          // Fill form with existing data
           if (client.fio && typeof client.fio === 'string') {
             document.getElementById('fio').value = client.fio;
           } else if (telegramUser && telegramUser.first_name) {
-            // Use Telegram user's first name if no FIO is stored
             const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
             document.getElementById('fio').value = fullName;
           }
@@ -1638,16 +1597,15 @@
           
           if (client.address && typeof client.address === 'string') {
             document.getElementById('address').value = client.address;
+            addressSelectedFromMap = false; // Existing address is not from current map selection
           }
         } else if (telegramUser && telegramUser.first_name) {
-          // If no client data exists, use Telegram user info
           const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
           document.getElementById('fio').value = fullName;
         }
         
       } catch (error) {
         console.error('Error loading client data:', error);
-        // Fallback to Telegram user data if API fails
         if (telegramUser && telegramUser.first_name) {
           const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
           document.getElementById('fio').value = fullName;
@@ -1655,7 +1613,7 @@
       }
     }
 
-    // Form submission
+    // FIXED: Form submission with proper coordinate handling
     async function submitClientForm(event) {
       event.preventDefault();
       
@@ -1676,20 +1634,41 @@
         return;
       }
 
-      // Ensure we have coordinates
-      if (!formData.get('latitude') || !formData.get('longitude')) {
+      // FIXED: Ensure form uses the coordinates that were already set
+      let finalLatitude = formData.get('latitude');
+      let finalLongitude = formData.get('longitude');
+
+      // Only set coordinates if they're missing
+      if (!finalLatitude || !finalLongitude) {
         if (currentUserLocation) {
-          formData.set('latitude', currentUserLocation[1]);
-          formData.set('longitude', currentUserLocation[0]);
+          // Use current user location as fallback
+          finalLatitude = currentUserLocation[1];
+          finalLongitude = currentUserLocation[0];
+          console.log('📍 Using current user location as fallback:', currentUserLocation);
         } else {
           // Default to Almaty coordinates
-          formData.set('latitude', '43.238949');
-          formData.set('longitude', '76.889709');
+          finalLatitude = '43.238949';
+          finalLongitude = '76.889709';
+          console.log('🏙️ Using default Almaty coordinates');
         }
+        
+        formData.set('latitude', finalLatitude);
+        formData.set('longitude', finalLongitude);
       }
 
       try {
         form.classList.add('loading');
+        
+        // Debug log before sending
+        console.log('📤 Sending form data:', {
+          fio: formData.get('fio'),
+          contact: formData.get('contact'),
+          address: formData.get('address'),
+          latitude: formData.get('latitude'),
+          longitude: formData.get('longitude'),
+          telegram_id: formData.get('telegram_id'),
+          addressSelectedFromMap: addressSelectedFromMap
+        });
         
         const response = await fetch('/api/client/save', {
           method: 'POST',
@@ -1755,7 +1734,6 @@
     // Initialize the application
     async function initializeApp() {
       try {
-        // Debug information
         console.log('=== Meily Client Forms Debug Info ===');
         console.log('Telegram WebApp available:', !!window.Telegram?.WebApp);
         console.log('User ID:', telegramId);
