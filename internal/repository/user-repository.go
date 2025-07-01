@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"meily/internal/domain"
 	"strconv"
@@ -446,6 +447,54 @@ func (r *UserRepository) InsertLoto(ctx context.Context, e domain.LotoEntry) err
 		e.Receipt, e.Fio, e.Contact, e.Address, e.DatePay,
 	)
 	return err
+}
+
+// UpdateLotoWithLoop updates loto records one by one (if you need individual control)
+func (r *UserRepository) UpdateLotoWithLoop(ctx context.Context, userID int64, fio, contact, address string) error {
+	// First, get all loto IDs that need updating
+	const selectQ = `
+		SELECT id_loto 
+		FROM loto 
+		WHERE id_user = ? 
+		AND (contact IS NULL OR contact = '') 
+		AND (address IS NULL OR address = '');
+	`
+	rows, err := r.db.QueryContext(ctx, selectQ, userID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var lotoIDs []int
+	for rows.Next() {
+		var lotoID int
+		if err := rows.Scan(&lotoID); err != nil {
+			return err
+		}
+		lotoIDs = append(lotoIDs, lotoID)
+	}
+
+	if len(lotoIDs) == 0 {
+		return fmt.Errorf("no loto records found for user %d with empty contact/address", userID)
+	}
+
+	// Update each record individually
+	const updateQ = `
+		UPDATE loto 
+		SET fio = ?, contact = ?, address = ?, updated_at = datetime('now')
+		WHERE id_user = ? AND id_loto = ?;
+	`
+
+	for _, lotoID := range lotoIDs {
+		_, err := r.db.ExecContext(ctx, updateQ, fio, contact, address, userID, lotoID)
+		if err != nil {
+			return fmt.Errorf("failed to update loto record %d for user %d: %v", lotoID, userID, err)
+		}
+		log.Printf("Updated loto record %d for user %d", lotoID, userID)
+	}
+
+	log.Printf("Successfully updated %d loto records for user %d", len(lotoIDs), userID)
+	return nil
 }
 
 // InsertGeo вставляет запись в таблицу geo (legacy support)

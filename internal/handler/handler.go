@@ -1129,10 +1129,6 @@ func (h *Handler) ClientSaveHandler(w http.ResponseWriter, r *http.Request) {
 	latitudeStr := r.FormValue("latitude")
 	longitudeStr := r.FormValue("longitude")
 
-	h.logger.Info("address", zap.String("address", address))
-	h.logger.Info("latitudeStr", zap.String("latitudeStr", latitudeStr))
-	h.logger.Info("longitudeStr", zap.String("longitudeStr", longitudeStr))
-
 	// Validate required fields
 	if telegramIDStr == "" || fio == "" || contact == "" || address == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -1226,6 +1222,14 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 			"💄 Meily Cosmetics брендін таңдағаныңыз үшін рахмет!",
 		fio, contact, address,
 	)
+
+	if err := h.repo.UpdateLotoWithLoop(h.ctx, telegramID, fio, contact, address); err != nil {
+		h.logger.Error("error update loto table", zap.Error(err))
+		h.bot.SendMessage(h.ctx, &bot.SendMessageParams{
+			ChatID: telegramID,
+			Text:   "Сізде билет енгізгенде қате орын алды.",
+		})
+	}
 
 	combinedText := confirmationTextRU + "\n\n" + "═══════════════════" + "\n\n" + confirmationTextKZ
 
