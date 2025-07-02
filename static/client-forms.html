@@ -118,7 +118,7 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding: 20px;
-      padding-bottom: 80px;
+      padding-bottom: 120px; /* Increased for address button */
     }
 
     .lang-switch {
@@ -321,7 +321,7 @@
       animation: markerBounce 0.6s ease-out;
       cursor: grab;
       color: white;
-      background: linear-gradient(135deg, #2196f3, #1976d2);
+      background: linear-gradient(135deg, #f44336, #d32f2f);
     }
 
     @keyframes markerBounce {
@@ -514,6 +514,102 @@
 
     .suggestion-item:last-child {
       border-bottom: none;
+    }
+
+    /* Fixed bottom address selector */
+    .address-selector-fixed {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--card-border);
+      padding: 15px 20px;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      display: none;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transform: translateY(100%);
+      transition: all 0.3s ease;
+    }
+
+    .address-selector-fixed.active {
+      display: block;
+      transform: translateY(0);
+    }
+
+    .address-selector-content {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .address-selector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .address-selector-title {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .close-address-selector {
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-address-selector:hover {
+      color: var(--text-primary);
+      background: var(--card-bg);
+    }
+
+    .address-selector-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .address-selector-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .address-selector-btn.map-btn {
+      background: var(--accent-gradient);
+      color: white;
+    }
+
+    .address-selector-btn.input-btn {
+      background: var(--input-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+    }
+
+    .address-selector-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
 
     .location-permission-dialog {
@@ -717,7 +813,7 @@
     @media (max-width: 480px) {
       .content-wrapper {
         padding: 12px;
-        padding-bottom: 80px;
+        padding-bottom: 140px; /* More space for fixed buttons */
       }
 
       .page {
@@ -746,6 +842,14 @@
 
       h1 {
         font-size: 1.5rem;
+      }
+
+      .address-selector-buttons {
+        flex-direction: column;
+      }
+
+      .address-selector-btn {
+        padding: 14px 16px;
       }
     }
   </style>
@@ -805,8 +909,9 @@
             </label>
             <div class="address-input-container">
               <input type="text" id="address" name="address" class="address-input" 
-                     placeholder="" data-placeholder-ru="Адрес будет определен автоматически" data-placeholder-kz="Мекенжай автоматты түрде анықталады" required>
-              <button type="button" class="map-picker-btn" onclick="openMapSelector()">📍</button>
+                     placeholder="" data-placeholder-ru="Нажмите для выбора адреса" data-placeholder-kz="Мекенжай таңдау үшін басыңыз" 
+                     readonly>
+              <button type="button" class="map-picker-btn" onclick="showAddressSelector()">📍</button>
             </div>
             <div id="address_suggestions" class="suggestions-container" style="display: none;"></div>
           </div>
@@ -820,6 +925,26 @@
             <span data-ru="Сохранить данные" data-kz="Деректерді сақтау">Деректерді сақтау</span>
           </button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed Bottom Address Selector -->
+  <div id="addressSelectorFixed" class="address-selector-fixed">
+    <div class="address-selector-content">
+      <div class="address-selector-header">
+        <div class="address-selector-title" data-ru="Выберите способ указания адреса" data-kz="Мекенжай көрсету әдісін таңдаңыз">Мекенжай көрсету әдісін таңдаңыз</div>
+        <button class="close-address-selector" onclick="hideAddressSelector()">&times;</button>
+      </div>
+      <div class="address-selector-buttons">
+        <button class="address-selector-btn map-btn" onclick="openMapSelector()">
+          <span>🗺️</span>
+          <span data-ru="Выбрать на карте" data-kz="Картадан таңдау">Картадан таңдау</span>
+        </button>
+        <button class="address-selector-btn input-btn" onclick="enableAddressInput()">
+          <span>✏️</span>
+          <span data-ru="Ввести вручную" data-kz="Қолмен енгізу">Қолмен енгізу</span>
+        </button>
       </div>
     </div>
   </div>
@@ -867,6 +992,7 @@
     let selectorMap;
     let userLocationMarker;
     let addressMarker;
+    let selectedAddressMarker; // NEW: For showing selected address on main map
     let currentUserLocation = null;
     let locationPermissionGranted = false;
     let watchId = null;
@@ -874,7 +1000,9 @@
     let telegramId = null;
     let telegramUser = null;
     let selectedCoords = null;
-    let addressSelectedFromMap = false; // Track if address was selected from map
+    let selectedAddress = null;
+    let addressSelectedFromMap = false;
+    let isManualAddressInput = false; // NEW: Track manual input mode
 
     // Set Telegram viewport height
     function updateViewportHeight() {
@@ -901,7 +1029,10 @@
         saveData: 'Сохранить данные',
         enterFullName: 'Введите ваше полное имя',
         phoneNumber: 'Номер телефона',
-        addressAutoDetect: 'Адрес будет определен автоматически',
+        clickToSelectAddress: 'Нажмите для выбора адреса',
+        selectAddressMethod: 'Выберите способ указания адреса',
+        selectOnMap: 'Выбрать на карте',
+        enterManually: 'Ввести вручную',
         locationPermission: 'Разрешение на геолокацию',
         locationPermissionMessage: 'Для автоматического определения вашего адреса и точной доставки нам нужен доступ к вашему местоположению.',
         allow: 'Разрешить',
@@ -915,7 +1046,8 @@
         dataSaved: 'Данные сохранены!',
         error: 'Ошибка',
         loadingClientData: 'Загружаем ваши данные...',
-        myLocation: 'Мое местоположение'
+        myLocation: 'Мое местоположение',
+        enterAddressManually: 'Введите адрес вручную'
       },
       kz: {
         deliveryData: 'Жеткізу деректері',
@@ -925,7 +1057,10 @@
         saveData: 'Деректерді сақтау',
         enterFullName: 'Толық атыңызды енгізіңіз',
         phoneNumber: 'Телефон нөмірі',
-        addressAutoDetect: 'Мекенжай автоматты түрде анықталады',
+        clickToSelectAddress: 'Мекенжай таңдау үшін басыңыз',
+        selectAddressMethod: 'Мекенжай көрсету әдісін таңдаңыз',
+        selectOnMap: 'Картадан таңдау',
+        enterManually: 'Қолмен енгізу',
         locationPermission: 'Геолокацияға рұқсат',
         locationPermissionMessage: 'Мекенжайыңызды автоматты түрде анықтау және дәл жеткізу үшін бізге сіздің орналасқан жеріңізге қол жеткізу керек.',
         allow: 'Рұқсат беру',
@@ -939,7 +1074,8 @@
         dataSaved: 'Деректер сақталды!',
         error: 'Қате',
         loadingClientData: 'Деректеріңізді жүктеуде...',
-        myLocation: 'Менің орналасқан жерім'
+        myLocation: 'Менің орналасқан жерім',
+        enterAddressManually: 'Мекенжайды қолмен енгізіңіз'
       }
     };
 
@@ -1071,14 +1207,14 @@
             updateLocationStatus('active', translations[currentLang].locationActive);
             startRealtimeLocationTracking();
             
-            // Only update coordinates if address was NOT selected from map
-            if (!addressSelectedFromMap) {
+            // Only update coordinates if address was NOT selected from map/manual
+            if (!addressSelectedFromMap && !isManualAddressInput) {
               document.getElementById('latitude').value = position.coords.latitude;
               document.getElementById('longitude').value = position.coords.longitude;
               
               // Get address from coordinates and update form
               getAddressFromCoordinates(currentUserLocation).then(address => {
-                if (address && !addressSelectedFromMap) {
+                if (address && !addressSelectedFromMap && !isManualAddressInput) {
                   document.getElementById('address').value = address;
                 }
               });
@@ -1092,11 +1228,14 @@
                 addUserLocationMarker(currentUserLocation);
               }
               
-              clientMap.setLocation({
-                center: currentUserLocation,
-                zoom: 16,
-                duration: 1000
-              });
+              // Only center on user if no address is selected
+              if (!selectedCoords) {
+                clientMap.setLocation({
+                  center: currentUserLocation,
+                  zoom: 16,
+                  duration: 1000
+                });
+              }
             }
           },
           (error) => {
@@ -1150,8 +1289,8 @@
           
           currentUserLocation = newCoords;
           
-          // Only update coordinates if address was NOT selected from map
-          if (!addressSelectedFromMap) {
+          // Only update coordinates if address was NOT selected from map/manual
+          if (!addressSelectedFromMap && !isManualAddressInput) {
             document.getElementById('latitude').value = position.coords.latitude;
             document.getElementById('longitude').value = position.coords.longitude;
           }
@@ -1209,9 +1348,6 @@
         }));
         clientMap.addChild(new YMapDefaultFeaturesLayer());
 
-        // Add user location marker
-        addUserLocationMarker(center);
-
         console.log('✅ Client Map initialized successfully');
       } catch (error) {
         console.error('❌ Error initializing Client Map:', error);
@@ -1246,6 +1382,43 @@
         console.log('✅ User location marker added');
       } catch (error) {
         console.error('❌ Error adding user location marker:', error);
+      }
+    }
+
+    // NEW: Add selected address marker to main map
+    function addSelectedAddressMarker(coords) {
+      try {
+        // Remove existing selected address marker
+        if (selectedAddressMarker && clientMap) {
+          clientMap.removeChild(selectedAddressMarker);
+        }
+
+        const {YMapMarker} = ymaps3;
+        
+        const addressElement = document.createElement('div');
+        addressElement.className = 'address-marker';
+        addressElement.textContent = '📍';
+        
+        selectedAddressMarker = new YMapMarker(
+          {
+            coordinates: coords,
+            draggable: false
+          },
+          addressElement
+        );
+
+        clientMap.addChild(selectedAddressMarker);
+        
+        // Center map on selected address
+        clientMap.setLocation({
+          center: coords,
+          zoom: 16,
+          duration: 1000
+        });
+        
+        console.log('✅ Selected address marker added to main map');
+      } catch (error) {
+        console.error('❌ Error adding selected address marker:', error);
       }
     }
 
@@ -1321,8 +1494,145 @@
       }
     }
 
+    // NEW: Address selector functions
+    function showAddressSelector() {
+      document.getElementById('addressSelectorFixed').classList.add('active');
+    }
+
+    function hideAddressSelector() {
+      document.getElementById('addressSelectorFixed').classList.remove('active');
+    }
+
+    function enableAddressInput() {
+      hideAddressSelector();
+      isManualAddressInput = true;
+      addressSelectedFromMap = false;
+      
+      const addressInput = document.getElementById('address');
+      
+      // Remove readonly and clear any existing value
+      addressInput.readonly = false;
+      addressInput.removeAttribute('readonly');
+      addressInput.value = '';
+      addressInput.placeholder = translations[currentLang].enterAddressManually;
+      
+      // Remove click handler temporarily
+      addressInput.onclick = null;
+      addressInput.removeEventListener('click', showAddressSelector);
+      
+      // Remove existing selected address marker if any
+      if (selectedAddressMarker && clientMap) {
+        clientMap.removeChild(selectedAddressMarker);
+        selectedAddressMarker = null;
+      }
+      
+      // Clear coordinates until user selects something
+      selectedCoords = null;
+      selectedAddress = null;
+      
+      // Enable input and show keyboard - multiple attempts for mobile
+      setTimeout(() => {
+        addressInput.disabled = false;
+        addressInput.focus();
+        
+        // Force keyboard on mobile devices
+        if (window.Telegram && Telegram.WebApp) {
+          // Scroll to input
+          addressInput.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Multiple focus attempts
+          setTimeout(() => {
+            addressInput.click();
+            addressInput.focus();
+          }, 100);
+          
+          setTimeout(() => {
+            addressInput.select();
+            addressInput.focus();
+          }, 200);
+        } else {
+          // Desktop focus
+          addressInput.click();
+          addressInput.focus();
+        }
+      }, 150);
+      
+      // Re-setup event listeners for manual input
+      setupManualAddressInput();
+      
+      console.log('✏️ Manual address input enabled');
+    }
+
+    function setupManualAddressInput() {
+      const input = document.getElementById('address');
+      
+      // Remove old event listeners
+      input.removeEventListener('input', handleAddressInput);
+      input.removeEventListener('focus', handleAddressFocus);
+      input.removeEventListener('click', showAddressSelector);
+      
+      // Add new event listeners for manual input
+      input.addEventListener('input', handleManualAddressInput);
+      input.addEventListener('focus', function(e) {
+        e.stopPropagation();
+        // Don't show selector when in manual mode
+        if (!e.target.readonly) {
+          console.log('📝 Manual input focused');
+        }
+      });
+      
+      // Override click behavior for manual input
+      input.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!e.target.readonly) {
+          e.target.focus();
+          console.log('📝 Manual input clicked');
+        }
+      });
+    }
+
+    function handleManualAddressInput(e) {
+      clearTimeout(suggestTimeout);
+      const query = e.target.value;
+      
+      console.log('📝 Manual input value:', query);
+      
+      // Mark as manual input when user types
+      isManualAddressInput = true;
+      addressSelectedFromMap = false;
+      
+      if (query.length < 3) {
+        document.getElementById('address_suggestions').style.display = 'none';
+        return;
+      }
+      
+      suggestTimeout = setTimeout(async () => {
+        try {
+          const response = await fetch(
+            `https://geocode-maps.yandex.ru/1.x/?apikey=8a3e4da0-9ef2-4176-9203-e7014c1dba6f&geocode=${encodeURIComponent(query)}&format=json&results=5&lang=ru_RU&bbox=46.99,41.15~87.31,55.44`
+          );
+          
+          if (!response.ok) return;
+          
+          const data = await response.json();
+          const geoObjects = data.response?.GeoObjectCollection?.featureMember || [];
+          
+          if (geoObjects.length > 0) {
+            displaySuggestions(geoObjects.slice(0, 5));
+          }
+        } catch (error) {
+          console.error('Suggestion error:', error);
+        }
+      }, 300);
+    }
+
     // Map selector modal - FIXED VERSION
     async function openMapSelector() {
+      hideAddressSelector();
       document.getElementById('mapSelectorModal').style.display = 'block';
       
       // Initialize selector map
@@ -1335,7 +1645,7 @@
             selectorMap.destroy();
           }
 
-          const center = currentUserLocation || [76.889709, 43.238949];
+          const center = selectedCoords || currentUserLocation || [76.889709, 43.238949];
 
           selectorMap = new YMap(
             document.getElementById('selectorMap'),
@@ -1372,6 +1682,27 @@
               userLocationElement
             );
             selectorMap.addChild(userMarker);
+          }
+
+          // Add existing selected address marker if available
+          if (selectedCoords) {
+            const addressElement = document.createElement('div');
+            addressElement.className = 'address-marker';
+            addressElement.textContent = '📍';
+            
+            addressMarker = new YMapMarker(
+              { coordinates: selectedCoords },
+              addressElement
+            );
+            
+            selectorMap.addChild(addressMarker);
+            
+            // Enable select button with existing address
+            const selectBtn = document.querySelector('.select-address-btn');
+            selectBtn.disabled = false;
+            if (selectedAddress) {
+              selectBtn.textContent = `${translations[currentLang].selectThisAddress}: ${selectedAddress.substring(0, 50)}...`;
+            }
           }
 
         } catch (error) {
@@ -1414,6 +1745,7 @@
         
         // FIXED: Get address from the SAME coordinates where pin was placed
         const address = await getAddressFromCoordinates(coords);
+        selectedAddress = address;
         selectBtn.textContent = `${translations[currentLang].selectThisAddress}: ${address.substring(0, 50)}...`;
         
         console.log('🎯 Pin placed - Address and coords match:', {
@@ -1428,39 +1760,34 @@
 
     // FIXED: Select address from map with matching coordinates
     function selectCurrentAddress() {
-      if (!selectedCoords) {
-        console.warn('⚠️ No coordinates selected');
+      if (!selectedCoords || !selectedAddress) {
+        console.warn('⚠️ No coordinates or address selected');
         return;
       }
 
       console.log('✅ Selecting address from map with coords:', selectedCoords);
 
-      // FIXED: Set coordinates FIRST, then get address from SAME coordinates
+      // FIXED: Set coordinates and address from map selection
       addressSelectedFromMap = true;
+      isManualAddressInput = false;
       
-      // Update coordinates IMMEDIATELY from the pin location
+      // Update form with selected data
       document.getElementById('latitude').value = selectedCoords[1];  // latitude from pin
       document.getElementById('longitude').value = selectedCoords[0]; // longitude from pin
+      document.getElementById('address').value = selectedAddress;
+      document.getElementById('address').readonly = true;
       
-      // Then get address from the EXACT SAME coordinates
-      getAddressFromCoordinates(selectedCoords).then(address => {
-        // Update address from the same coordinates
-        document.getElementById('address').value = address;
-        
-        console.log('🎯 Form updated with matching address and coordinates:', {
-          address: address,
-          latitude: selectedCoords[1],
-          longitude: selectedCoords[0],
-          source: 'map_pin'
-        });
-        
-        closeMapSelector();
-      }).catch(error => {
-        console.error('Error getting address:', error);
-        // Fallback: use coordinate string as address
-        document.getElementById('address').value = `${selectedCoords[1].toFixed(6)}, ${selectedCoords[0].toFixed(6)}`;
-        closeMapSelector();
+      // Add marker to main map
+      addSelectedAddressMarker(selectedCoords);
+      
+      console.log('🎯 Form updated with matching address and coordinates:', {
+        address: selectedAddress,
+        latitude: selectedCoords[1],
+        longitude: selectedCoords[0],
+        source: 'map_pin'
       });
+      
+      closeMapSelector();
     }
 
     function closeMapSelector() {
@@ -1469,47 +1796,30 @@
         selectorMap.destroy();
         selectorMap = null;
       }
-      selectedCoords = null;
     }
 
     // Address suggestions
     let suggestTimeout;
     
+    // Legacy functions - keeping for compatibility but using new approach
     function setupAddressSuggestions() {
-      const input = document.getElementById('address');
-      const suggestionsId = 'address_suggestions';
-      
-      input.addEventListener('input', function(e) {
-        clearTimeout(suggestTimeout);
-        const query = e.target.value;
-        
-        // Reset map selection flag when user types manually
-        addressSelectedFromMap = false;
-        
-        if (query.length < 3) {
-          document.getElementById(suggestionsId).style.display = 'none';
-          return;
-        }
-        
-        suggestTimeout = setTimeout(async () => {
-          try {
-            const response = await fetch(
-              `https://geocode-maps.yandex.ru/1.x/?apikey=8a3e4da0-9ef2-4176-9203-e7014c1dba6f&geocode=${encodeURIComponent(query)}&format=json&results=5&lang=ru_RU&bbox=46.99,41.15~87.31,55.44`
-            );
-            
-            if (!response.ok) return;
-            
-            const data = await response.json();
-            const geoObjects = data.response?.GeoObjectCollection?.featureMember || [];
-            
-            if (geoObjects.length > 0) {
-              displaySuggestions(geoObjects.slice(0, 5));
-            }
-          } catch (error) {
-            console.error('Suggestion error:', error);
-          }
-        }, 300);
-      });
+      // This is now handled by setupManualAddressInput()
+      console.log('📝 Address suggestions setup called');
+    }
+
+    function handleAddressFocus(e) {
+      // Legacy function - handled by new event listeners
+      if (e.target.readonly) {
+        e.preventDefault();
+        e.target.blur();
+        showAddressSelector();
+        return;
+      }
+    }
+
+    function handleAddressInput(e) {
+      // Legacy function - now using handleManualAddressInput
+      handleManualAddressInput(e);
     }
 
     function displaySuggestions(items) {
@@ -1530,12 +1840,19 @@
         div.className = 'suggestion-item';
         div.textContent = name;
         div.onclick = function() {
-          // When user selects from suggestions, use suggestion coordinates
+          // When user selects from suggestions
+          isManualAddressInput = true;
           addressSelectedFromMap = false;
+          selectedCoords = coords;
+          selectedAddress = name;
+          
           document.getElementById('address').value = name;
           document.getElementById('latitude').value = coords[1];  // latitude
           document.getElementById('longitude').value = coords[0]; // longitude
           container.style.display = 'none';
+          
+          // Add marker to main map for manual selection
+          addSelectedAddressMarker(coords);
           
           console.log('📝 Address selected from suggestions:', {
             address: name,
@@ -1597,7 +1914,20 @@
           
           if (client.address && typeof client.address === 'string') {
             document.getElementById('address').value = client.address;
-            addressSelectedFromMap = false; // Existing address is not from current map selection
+            
+            // If we have coordinates from saved data, use them
+            if (client.latitude && client.longitude) {
+              const savedCoords = [parseFloat(client.longitude), parseFloat(client.latitude)];
+              selectedCoords = savedCoords;
+              selectedAddress = client.address;
+              document.getElementById('latitude').value = client.latitude;
+              document.getElementById('longitude').value = client.longitude;
+              
+              // Add marker for existing address and set as readonly
+              addSelectedAddressMarker(savedCoords);
+              document.getElementById('address').readonly = true;
+              addressSelectedFromMap = true; // Treat saved address as selected
+            }
           }
         } else if (telegramUser && telegramUser.first_name) {
           const fullName = telegramUser.first_name + (telegramUser.last_name ? ' ' + telegramUser.last_name : '');
@@ -1640,7 +1970,12 @@
 
       // Only set coordinates if they're missing
       if (!finalLatitude || !finalLongitude) {
-        if (currentUserLocation) {
+        if (selectedCoords) {
+          // Use selected coordinates
+          finalLatitude = selectedCoords[1];
+          finalLongitude = selectedCoords[0];
+          console.log('📍 Using selected coordinates:', selectedCoords);
+        } else if (currentUserLocation) {
           // Use current user location as fallback
           finalLatitude = currentUserLocation[1];
           finalLongitude = currentUserLocation[0];
@@ -1667,7 +2002,8 @@
           latitude: formData.get('latitude'),
           longitude: formData.get('longitude'),
           telegram_id: formData.get('telegram_id'),
-          addressSelectedFromMap: addressSelectedFromMap
+          addressSelectedFromMap: addressSelectedFromMap,
+          isManualAddressInput: isManualAddressInput
         });
         
         const response = await fetch('/api/client/save', {
@@ -1727,6 +2063,9 @@
     window.centerOnUser = centerOnUser;
     window.requestLocationPermission = requestLocationPermission;
     window.skipLocationPermission = skipLocationPermission;
+    window.showAddressSelector = showAddressSelector;
+    window.hideAddressSelector = hideAddressSelector;
+    window.enableAddressInput = enableAddressInput;
     window.openMapSelector = openMapSelector;
     window.closeMapSelector = closeMapSelector;
     window.selectCurrentAddress = selectCurrentAddress;
@@ -1756,14 +2095,30 @@
         // Set up form submission
         document.getElementById('clientForm').addEventListener('submit', submitClientForm);
         
-        // Set up address suggestions
-        setupAddressSuggestions();
+        // Set up initial address field behavior
+        const addressInput = document.getElementById('address');
+        
+        // Initial setup for readonly address field
+        addressInput.addEventListener('click', function(e) {
+          if (e.target.readonly) {
+            showAddressSelector();
+          }
+        });
+        
+        addressInput.addEventListener('focus', function(e) {
+          if (e.target.readonly) {
+            e.preventDefault();
+            e.target.blur();
+            showAddressSelector();
+          }
+        });
         
         // Load existing client data first
         await loadClientData();
         
-        // Initialize map with default location (Almaty)
-        await initClientMap([76.889709, 43.238949]);
+        // Initialize map with default location (Almaty) or selected address
+        const initialCenter = selectedCoords || [76.889709, 43.238949];
+        await initClientMap(initialCenter);
         
         // Show permission dialog after maps are ready
         setTimeout(showLocationPermissionDialog, 1500);
