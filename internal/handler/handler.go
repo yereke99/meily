@@ -1250,20 +1250,21 @@ func (h *Handler) sendDeliveryConfirmation(telegramID int64, fio, contact, addre
 			zap.Float64("latitude", latitude),
 			zap.Float64("longitude", longitude))
 	}
-
-	_, err = h.bot.SendMessage(h.ctx, &bot.SendMessageParams{
-		ChatID: telegramID,
-		Text:   combinedText,
-		ReplyMarkup: &models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
+	// FIXED: Use direct Mini App URL without bot username
+	kb := models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
 				{
-					{
-						Text: "✏️ Енгізілген деректерді өзгерту.(Егер қате болса)",
-						URL:  "https://t.me/meilly_cosmetics_bot/MeiLyCosmetics",
-					},
+					Text: "✏️ Енгізілген деректерді өзгерту.",
+					URL:  "https://t.me/meilly_cosmetics_bot/MeiLyCosmetics", // Direct static URL
 				},
 			},
 		},
+	}
+	_, err = h.bot.SendMessage(h.ctx, &bot.SendMessageParams{
+		ChatID:      telegramID,
+		Text:        combinedText,
+		ReplyMarkup: kb,
 	})
 
 	if err != nil {
